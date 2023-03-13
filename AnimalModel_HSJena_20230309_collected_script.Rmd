@@ -1,0 +1,653 @@
+---
+title: "AnimalModel_Schielzeth_Lab_Jena_20230309"
+author: "Nhu L.T. Tran"
+abstract: "Collected practice script of animal model using different packages"
+date: "2023-03-09"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, 
+                      root.dir = "/Users/nhutran/Documents/PhD/Working/Coding/TutorAnimalModel/HS_Jena2023"
+                      )
+```
+
+
+## 1. Libraries required
+
+```{r}
+
+library(MCMCglmm)
+library(lme4)
+library(pedigreemm)
+library(nadiv)
+library(brms)
+
+```
+
+## 2. Loading the data
+
+### 2.1. Pedigree data
+
+```{r}
+ped = read.table("/Users/nhutran/Documents/PhD/Working/Coding/TutorAnimalModel/HS_Jena2023/Pedigree_ZebraFinch2.txt", header = T)
+head(ped)
+names(ped) = c("id", "dam", "sire")
+
+#it's essential to classify the variables to factor or numeric
+ped$id = as.factor(ped$id)
+ped$sire = as.factor(ped$sire)
+ped$dam = as.factor(ped$dam)
+
+str(ped)
+```
+
+So here the pedigree doesn't have records of dams and sires in "id" column. The mother and father of these dam and sire are unknown but we have to include them and put NA (MCMCglmm, brms) or 0 (pedigreemm)
+
+```{r}
+
+#get the dams and sires
+unique_mom = unique(ped$dam)
+unique_dad = unique(ped$sire)
+
+# check which unique dams and sires are not in the AnimalID column
+missing_mom = unique_mom[!(unique_mom %in% ped$id)]
+missing_dad = unique_dad[!(unique_dad %in% ped$id)]
+
+#add missing mothers to the AnimalID column
+missing_mom = data.frame(missing_mom)
+missing_dad = data.frame(missing_dad)
+colnames(missing_mom)[1] = "id"
+colnames(missing_dad)[1] = "id"
+
+missing_par1 = rbind(missing_mom,missing_dad)
+missing_par1$dam = "MISSING"
+missing_par1$sire = "MISSING"
+
+missing_par2 = rbind(missing_mom,missing_dad)
+missing_par2$dam = "0"
+missing_par2$sire = "0"
+
+#combining the data
+ped1 = rbind(missing_par1, ped)
+
+ped1$id = as.factor(ped1$id)
+ped1$dam = as.factor(ped1$dam)
+ped1$sire = as.factor(ped1$sire)
+
+ped2 = rbind(missing_par2, ped)
+
+#replace missings with NA
+ped1$dam[ped1$dam == "MISSING"] = NA
+ped1$sire[ped1$sire == "MISSING"] = NA
+
+ped2$id = as.factor(ped2$id)
+ped2$dam = as.factor(ped2$dam)
+ped2$sire = as.factor(ped2$sire)
+
+
+str(ped1)
+str(ped2)
+
+```
+
+### 2.2. Phenotype data
+```{r }
+pheno1 = read.table("/Users/nhutran/Documents/PhD/Working/Coding/TutorAnimalModel/HS_Jena2023/Neophilia_ZebraFinches.txt", header = T)
+str(pheno1)
+```
+
+#### Reformating to match the ped file
+In this case reformatting required to match individual names with the pedigree file
+```{r}
+pheno1$Animal = paste("AA", pheno1$IndID, sep ="")
+pheno1$animal = pheno1$Animal #some packages want "animal" in low leter case
+pheno1$MotherID = paste("AA", pheno1$MotherID, sep ="")
+
+pheno1$ObjectType = as.factor(pheno1$ObjectType)
+levels(pheno1$ObjectType) = c("Flower", "Apple")
+
+colnames(pheno1)[3] = "dam"
+
+#required by mcmcglmm 
+pheno1$dam = as.factor(pheno1$dam)
+pheno1$animal = as.factor(pheno1$animal)
+pheno1$FosterID = as.factor(pheno1$FosterID)
+pheno1$PeerGroupID = as.factor(pheno1$PeerGroupID)
+pheno1$IndID = as.factor(pheno1$IndID)
+
+str(pheno1)
+```
+
+                    --------------------------------------------------
+
+
+## 3. REPEATABILITY MODEL
+
+A repeatability model is a type of animal model used in quantitative genetics to estimate the proportion of phenotypic variation that is due to genetic factors versus environmental factors. The model assumes that the trait being measured is a combination of a fixed genetic effect and a random environmental effect. The random environmental effect is assumed to follow a normal distribution with mean zero and a constant variance, and the genetic effect is assumed to follow a multivariate normal distribution with mean zero and a variance-covariance matrix that depends on the pedigree structure of the animals being analyzed.
+
+There are three steps required:
+
+### 3.1. Fitting random intercepts
+In this step, the model is fit using the lmer() function with the response variable (NeophiliaScore) and the random intercept term (1|IndID) as the only predictors.
+The random intercept term (1|IndID) indicates that we are allowing for individual variation in the intercept of the model, where IndID is the unique identifier for each individual in the data.
+The summary() function is used to print the results of the model, including the estimated variance components.
+```{r }
+mod1 = lmer(NeophiliaScore ~ 1 + (1|IndID), data=pheno1)
+summary(mod1)
+```
+
+### 3.2. Fitting covariate
+In this step, the model is fit with the addition of a fixed effect covariate (ObjectType) to account for differences in NeophiliaScore based on the type of object presented to the individual.
+The lmer() function is used again with the response variable (NeophiliaScore) and the random intercept term (1|IndID) as well as the fixed effect covariate (ObjectType)
+The summary() function is used to print the results of the model, including the estimated variance components and the regression coefficient for ObjectType.
+
+```{r }
+mod2 = lmer(NeophiliaScore ~ ObjectType + (1|IndID), data=pheno1)
+summary(mod2)
+```
+
+### 3.3. Removal of intercept
+
+When fitting a linear model, the model includes an intercept term by default. The intercept represents the expected value of the response variable when all predictor variables are set to zero. However, sometimes we want to fit a model without an intercept term, particularly when we know that the response variable should be zero when all predictor variables are zero.
+When fitting a linear mixed effects model (LMM) or a generalized linear mixed effects model (GLMM) with random effects, the interpretation of the intercept can be different. The intercept in a mixed effects model represents the expected value of the response variable when all predictor variables are set to zero and all random effects are assumed to be zero as well. However, in some cases, we may not be interested in estimating the intercept, particularly if the response variable has a non-zero mean.
+By removing the intercept term from a LMM or GLMM, we are essentially centering the response variable around zero. This can be useful in certain cases, such as when we are interested in estimating the effect of a predictor variable on changes in the response variable from a baseline value of zero. Removing the intercept can also improve the convergence of the model in some cases.
+
+
+In this step, the model is fit with the intercept removed by including the "-1" term after the fixed effect covariate (ObjectType). This allows for the estimate of the random intercept to be interpreted as the baseline level of NeophiliaScore for each individual.
+The lmer() function is used again with the response variable (NeophiliaScore), the random intercept term (1|IndID), and the fixed effect covariate (ObjectType) with the "-1" term.
+The summary() function is used to print the results of the model, including the estimated variance components, the regression coefficient for ObjectType, and the estimated baseline level of NeophiliaScore for each individual.
+The baseline level of NeophiliaScore for each individual refers to the value of NeophiliaScore when all other predictors or covariates in the model are set to zero. In the model specified by the code provided, the intercept term represents the baseline level of NeophiliaScore for each individual, as it does not include any predictors or covariates. The random effect term (1|IndID) allows for variation in the baseline level of NeophiliaScore between individuals. By including other predictors or covariates in the model, such as ObjectType, the baseline level may change depending on the values of those predictors or covariates.
+
+
+
+```{r }
+mod3 = lmer(NeophiliaScore ~ ObjectType -1 + (1|IndID), data=pheno1)
+summary(mod3)
+```
+
+
+Three steps to report the variance explained:
+
+First, extract the variance components from the mixed-effects model using summary(mod)$varcor.
+The resulting output is a table with the variance components for each random effect in the model.
+
+Then create a data frame from this table and extracts the fourth column, which contains the variance component values. These values are assigned to the variable varcomp.
+
+Next, assign the names of the random effects to the elements of varcomp using names(varcomp) = data.frame(summary(mod)$varcor)[,1]. This is helpful for keeping track of which variance components correspond to which random effects.
+
+Finally, calculate the proportion of variance explained by each random effect by dividing each variance component by the total variance (sum(varcomp)). This is useful for understanding the relative importance of each random effect in the model.
+
+```{r }
+data.frame(summary(mod3)$varcor)
+varcomp = data.frame(summary(mod3)$varcor)[,4]
+names(varcomp) = data.frame(summary(mod3)$varcor)[,1]
+varcomp
+varcomp/sum(varcomp)
+```
+
+Repeatability models and animal models are both used to estimate heritability, which is the proportion of variation in a trait that is due to genetic variation. However, there are some differences between the two models.
+
+Repeatability models assume that the genetic effects on a trait are the same each time an individual is measured, but do not account for the relatedness between individuals. This means that repeatability models only estimate the proportion of variance in the trait that is due to variation in individual genetic effects.
+
+Animal models, on the other hand, take into account the relatedness between individuals in a pedigree, as well as the effects of other environmental factors. Animal models estimate both the proportion of variance in the trait that is due to individual genetic effects and the proportion of variance that is due to family-level genetic effects.
+
+In summary, repeatability models are simpler than animal models and assume that genetic effects are consistent across time, while animal models are more complex and take into account the relatedness between individuals.
+
+
+
+                    --------------------------------------------------
+## 4. ANIMAL MODEL
+
+### 4.1. Using pedigreemm
+pedigreemm uses REML, is one of the earliest packages used for animal model
+
+#### 4.1.1. Pedigree format for pedigreemm
+```{r}
+pedS4 = pedigreemm::pedigree(sire=as.character(ped2$sire), dam=as.character(ped2$dam), label=as.character(ped2$id))
+```
+
+#### 4.1.2. Removal of intercept
+```{r}
+amod_pm1 = pedigreemm(NeophiliaScore ~ ObjectType + (1|Animal) + (1|IndID), 
+		pedigree=list(Animal=pedS4), data=pheno1)
+summary(amod_pm1)
+
+varcomp = data.frame(summary(amod_pm1)$varcor)[,4]
+names(varcomp) = data.frame(summary(amod_pm1)$varcor)[,1]
+varcomp/sum(varcomp)
+
+```
+
+#### 4.1.3. The animal model with additional random effects
+##### Adding maternal effects
+```{r}
+amod_pm2 = pedigreemm(NeophiliaScore ~ ObjectType -1 + (1|Animal) + (1|dam) + (1|IndID),
+	pedigree=list(Animal=pedS4), data=pheno1)
+#got this warning: unable to evaluate scaled gradientWarning: Model failed to converge: degenerate  Hessian with 1 negative eigenvalues
+summary(amod_pm2)
+varcomp = data.frame(summary(amod_pm2)$varcor)[,4]
+names(varcomp) = data.frame(summary(amod_pm2)$varcor)[,1]
+varcomp/sum(varcomp)
+
+```
+
+##### Adding further early life effects
+```{r}
+amod_pm3 = pedigreemm(NeophiliaScore ~ ObjectType -1 + (1|Animal) + (1|dam) + (1|FosterID) + (1|PeerGroupID) + (1|IndID), pedigree=list(Animal=pedS4), data=pheno1)
+#good, no warning here. This takes awhile though
+summary(amod_pm3)
+varcomp = data.frame(summary(amod_pm3)$varcor)[,4]
+names(varcomp) = data.frame(summary(amod_pm3)$varcor)[,1]
+varcomp/sum(varcomp)
+```
+
+
+                            ***********************************
+                          
+### 4.2. Using MCMCglmm
+MCMCglmm came later. It uses Markov chain Monte Carlo, is presumably more flexible than REML. 
+
+#### 4.2.1. The repeatability model
+```{r}
+phenvar = var(pheno1$NeophiliaScore)
+
+prior = list(G = list(G1 = list(V = phenvar/2, nu = 0.002)),
+			 R = list(V = phenvar/2, nu = 0.002))
+amod_mg1 = MCMCglmm(NeophiliaScore ~ ObjectType - 1, random = ~ IndID, data=pheno1, 
+	nitt=15000, thin=5, burnin=5000, 
+	start = list(QUASI=FALSE),
+	prior=prior)
+
+```
+
+
+Next, we need to look at Sol and VCV - two output matrices that are commonly used to assess the convergence of the Markov Chain Monte Carlo (MCMC) algorithm.
+
+  * Sol stands for "Solutions" and refers to the estimates of the model parameters obtained from the MCMC algorithm. These include fixed effects, random effects, and residual variance components. Sol stands for the "deviance residuals" of the model, which are calculated by subtracting the expected values of the response variable from the observed values, and dividing by the square root of the variance function. The deviance residuals are a measure of how well the model fits the data, and can be used to diagnose issues such as overdispersion or outliers.
+  * VCV stands for the "variance-covariance matrix" of the MCMC samples, which provides information about the uncertainty in the estimates of the model parameters. This matrix provides information on the precision of the parameter estimates and the correlation between different parameters. The diagonal elements of the VCV matrix represent the variances of the parameter estimates, while the off-diagonal elements represent the covariances between pairs of parameters. By examining the VCV matrix, you can determine whether the MCMC algorithm has converged to the target distribution, and whether the estimates of the parameter variances and covariances are reliable.
+
+```{r}
+plot(amod_mg1$Sol)
+plot(amod_mg1$VCV)
+```
+These plots look rather bad. What you aim for is that the traces have "hairy caterpillar" look, meaning no problem with autocorrelation or convergence. Read on for more examples and troubleshooting. 
+
+
+
+#### 4.2.2. The Animal model
+
+```{r}
+# The animal model
+str(pheno1)
+str(ped1)
+
+  # MCMC expects a column "animal" (with small caps) for linking to the pedigree
+prior = list(G = list(G1 = list(V = phenvar/3, nu = 0.002),
+					  G2 = list(V = phenvar/3, nu = 0.002)),
+			 R = list(V = phenvar/3, nu = 0.002))
+amod_mg2 = MCMCglmm(NeophiliaScore ~ ObjectType - 1, random = ~ animal + IndID, 
+	data=pheno1, pedigree = ped1,
+	nitt=15000, thin=5, burnin=5000, 
+	start = list(QUASI=FALSE),
+	prior=prior)
+```
+
+
+These plots are still very bad.
+```{r}
+plot(amod_mg2$Sol)
+plot(amod_mg2$VCV)
+```
+
+
+Breaking down the genetic variance into multiple components allows for greater flexibility in modeling the genetic effects. This is because different genetic effects may have different variances and different degrees of relatedness between individuals.
+
+For example, in some cases, certain genes may have a larger effect on the trait of interest than others, or different genes may have different effects in different populations or environments. By breaking down the genetic variance into multiple components, the model can capture these different sources of variation and estimate their effects separately.
+
+Here the prior specifies 5 G components (G1 to G5) with equal variance (phenvar/6) and equal degrees of freedom (0.002). This is one possible way to model the genetic variance, but it is not the only way, and the number of components and their variances could be adjusted depending on the specific situation and the goals of the analysis.
+For instance, if there is evidence of non-additive genetic effects or dominance effects, then the genetic variance could be decomposed into more components to account for these effects. Alternatively, if there is little or no evidence of maternal effects or other non-additive effects, then the genetic variance could be modeled with fewer components.
+The key point is to choose a genetic variance model that adequately captures the genetic variation present in the data and that is appropriate for the specific research question being addressed.
+
+```{r}
+prior = list(G = list(G1 = list(V = phenvar/6, nu = 0.002),
+					  G2 = list(V = phenvar/6, nu = 0.002),
+					  G3 = list(V = phenvar/6, nu = 0.002),
+					  G4 = list(V = phenvar/6, nu = 0.002),
+					  G5 = list(V = phenvar/6, nu = 0.002)),
+			 R = list(V = phenvar/6, nu = 0.002))
+mod.chain1 = MCMCglmm(NeophiliaScore ~ ObjectType - 1, random = ~ animal + dam + FosterID + PeerGroupID + IndID, 
+	data=pheno1, pedigree = ped1,
+	nitt=15000, thin=5, burnin=5000, 
+	start = list(QUASI=FALSE),
+	prior=prior)
+mod.chain2 = MCMCglmm(NeophiliaScore ~ ObjectType - 1, random = ~ animal + dam + FosterID + PeerGroupID + IndID, 
+	data=pheno1, pedigree = ped1,
+	nitt=15000, thin=5, burnin=5000, 
+	start = list(QUASI=FALSE),
+	prior=prior)
+```
+
+#### 4.2.3. Some post processing
+
+In this code, the mcmcmod function takes two arguments, Sol and VCV, which are the estimated solutions and variance-covariance matrices from the animal models mod.chain1 and mod.chain2. The function creates an MCMC object using the mcmc function, which contains samples of the variance components and residual variance. The cbind function is used to combine the Sol and VCV matrices into a single matrix for input into the mcmc function.
+
+The start, end, and thin arguments to mcmc specify the starting and ending iteration numbers and the thinning interval for the MCMC chain. The resulting mychain object is then transformed to add additional columns for the proportion of variance explained by each component of the model (animal, dam, FosterID, PeerGroupID, IndID, and residual).
+
+Finally, the mcmcmod function returns the modified mychain object. The chain1 and chain2 objects are created by calling mcmcmod on the Sol and VCV matrices from mod.chain1 and mod.chain2, respectively. These modified MCMC objects are then combined into a list using the mcmc.list function and stored in the chains object.
+
+```{r}
+mcmcmod = function(Sol, VCV) {
+	mychain = mcmc(data=cbind(Sol, 
+				Vp = VCV[,"animal"] + VCV[,"dam"] + VCV[,"FosterID"] + VCV[,"PeerGroupID"] + VCV[,"IndID"] + VCV[,"units"]),
+			  start=attr(VCV, "mcpar")[1],
+			  end=attr(VCV, "mcpar")[2],
+			  thin=attr(VCV, "mcpar")[3])
+	mychain = mcmc(data=cbind(mychain, 
+				AnimalComp = VCV[,"animal"]   / mychain[,"Vp"],
+				MotherComp = VCV[,"dam"] / mychain[,"Vp"],
+				FosterComp = VCV[,"FosterID"] / mychain[,"Vp"],
+				PeerComp   = VCV[,"PeerGroupID"] / mychain[,"Vp"],
+				IndComp    = VCV[,"IndID"]    / mychain[,"Vp"],
+				ResidComp  = VCV[,"units"]    / mychain[,"Vp"]),
+			  start=attr(VCV, "mcpar")[1],
+			  end=attr(VCV, "mcpar")[2],
+			  thin=attr(VCV, "mcpar")[3])
+}
+chain1 = mcmcmod(mod.chain1$Sol, mod.chain1$VCV)
+chain2 = mcmcmod(mod.chain2$Sol, mod.chain2$VCV)
+chains = mcmc.list(chain1, chain2)
+plot(chains, ask=F)
+posterior.mode(chains)
+HPDinterval(chains)
+summary(chains)
+```
+The plots here look still bad. One of the solutions is to increase the iterations and thinning (see more in Troubleshoot). I will demonstrate this in the next method (brms)
+
+
+
+### 4.3. Using brms
+
+#### 4.3.1. Making covariance matrices
+```{r}
+Amat = as.matrix(nadiv::makeA(ped1))
+D = nadiv::makeD(ped1)
+Dmat = (D$Dinv)
+```
+
+In the brms package, the letter "a" is often used to represent a grouping factor in the formula for the model. In (1 | a | gr(animal, cov = Amat)) specifies a three-level hierarchical structure for the random effects. Specifically, the intercept term 1 is allowed to vary at the levels of a (which is the ID of the individuals in the dataset) and animal (which is a nested grouping factor within a).
+
+The gr() function specifies that the random effect structure is defined by the animal variable, and that the covariance matrix for these random effects is given by the Amat matrix. The cov argument of gr() allows you to specify the covariance structure of the random effects.
+
+The bf() function is used to specify the Bayesian formula, and in the case of univariate models, the formula can be specified simply as trait ~ 1. The 1 indicates that we are modeling the intercept only.
+
+The | a | gr(animal, cov = Amat) part of the formula specifies the random effects structure, where a refers to the grouping factor and gr(animal, cov = Amat) specifies the group-level structure for the random effect. This is important for models with more than one grouping factor or for models that include random slopes.
+
+
+#### 4.3.2. Including only additive genetic effect as random effect
+```{r}
+bf_neophilia = bf(NeophiliaScore ~ 1 + (1 | IndID | gr(animal, cov = Amat)))
+brms_mod1 = brm(
+  bf_neophilia, 
+  # would be bf_trait1 + bf_trait2 + set_rescor(TRUE) for multivariate model. The set_rescor() function is used to estimate the residual correlation
+  data = pheno1,
+  data2 = list(Amat = Amat),
+  chains = 2, cores = 2, iter = 1000
+)
+```
+So the plots look bad. In the next one I will change iterations and thinning, but to demonstrate the whole workflow, we continue
+```{r}
+summary(brms_mod1)
+plot(brms_mod1, ask = FALSE)
+```
+
+This gives standard deviation summary
+```{r}
+VarCorr(brms_mod1)
+```
+
+Then it is possible to use that to calculate variance and heritability and plotting for the trait using the function ‘as.mcmc’
+
+```{r}
+
+v_animal=(VarCorr(brms_mod1, summary = FALSE)$animal$sd)^2
+v_r = (VarCorr(brms_mod1, summary = FALSE)$residual$sd)^2
+
+h.neophilia = as.mcmc(v_animal[, 1] / (v_animal[, 1] + v_r[, 1]))
+
+summary(h.neophilia)
+plot(h.neophilia)
+```
+
+#### So in summary statistics, you look for:
+- Rhat close to 1. So Rhat = 1 is perfect
+- High effective sample size
+  * the effective sample size refers to the number of independent samples from the posterior distribution that are available for analysis.The effective sample size is divided into bulk and tail effective sample sizes. 
+  * the bulk effective sample size refers to the number of independent posterior samples that are drawn from the main part of the distribution, where the posterior density is relatively high and concentrated. In other words, it represents the number of independent samples that are most useful for estimating the posterior distribution of the parameters of interest.
+  * the tail effective sample size, on the other hand, refers to the number of independent posterior samples that are drawn from the tails of the distribution, where the posterior density is relatively low and spread out. The tail effective sample size is less important for estimating the posterior distribution of the parameters of interest, but it can be useful for estimating the tails of the distribution or extreme values.
+  * both the bulk and tail effective sample sizes are important for understanding the reliability and accuracy of the posterior inference in Bayesian models. A high effective sample size in both the bulk and tail regions indicates that the posterior distribution is well-sampled, while a low effective sample size in either region may suggest that the posterior inference may be less reliable or accurate.
+
+#### 4.3.3. Adding more fixed and random effects 
+Fixed and random effects can be added just as for the univariate case. 
+Try a bit more iterations here. 
+```{r}
+
+bf_neophilia = bf(NeophiliaScore ~ 1 + (1 | IndID | gr(animal, cov = Amat)) + (1|dam) + (1|FosterID) + ObjectType + (1|PeerGroupID))
+
+
+brms_mod2 = brm(
+  bf_neophilia, 
+  # would be bf_trait1 + bf_trait2 + set_rescor(TRUE) for multivariate model. The set_rescor() function is used to estimate the residual correlation
+  data = pheno1,
+  data2 = list(Amat = Amat),
+  chains = 2, cores = 2, iter = 5000
+)
+```
+
+So the trace plots here look better already
+```{r}
+summary(brms_mod2)
+plot(brms_mod2, ask = FALSE)
+
+```
+
+#### 4.3.4. Testing significance of variance components
+Here we can also check which model is better with some statistics.
+
+While testing the significance of fixed effects by evaluating whether or not their posterior distributions overlap zero was simple and valid, this approach does not work for variance components. Variance components are bounded to be positive (given a proper prior), and thus even when a random effect is not meaningful, its posterior distribution will never overlap zero.
+
+Model comparisons can be performed using the function loo_compare using waic or weighted AIC.
+
+```{r}
+brms_mod1 = add_criterion(brms_mod1, "waic")
+brms_mod2 = add_criterion(brms_mod2, "waic")
+loo_compare(brms_mod2, brms_mod1, criterion = "waic")
+```
+
+The output of loo_compare() compares the estimated expected log pointwise predictive density (ELPD) of two models (brms_mod2 and brms_mod1 in this case) using the widely applicable information criterion (WAIC). The elpd_diff column shows the difference in ELPD between the two models, where a positive value means the first model (brms_mod2 in this case) is favored, and a negative value means the second model (brms_mod1 in this case) is favored.
+
+In this case, brms_mod2 has a better ELPD than brms_mod1 as the elpd_diff is 0.0. The se_diff column shows the standard error of the difference between the two ELPD estimates. Since se_diff is less than the absolute value of elpd_diff in this case, the difference is likely to be statistically significant. This suggests that brms_mod2 is a better model than brms_mod1.
+
+#### 4.3.5. Remove intercept and add all the random factors we want
+I will also increase iterations 3 fold here and specify more thinning and burn-in (warm-up)
+```{r}
+
+bf_neophilia = bf(NeophiliaScore ~ ObjectType - 1 + (1  | gr(animal, cov = Amat)) + (1|dam) + (1|FosterID) + (1|PeerGroupID) + (1|IndID))
+
+
+brms_mod3 = brm(
+  bf_neophilia, 
+  data = pheno1,
+  data2 = list(Amat = Amat),
+  chains = 2, cores = 7, iter = 15000, 
+  warmup = 5000, thin = 5
+)
+
+summary(brms_mod3)
+plot(brms_mod3, ask = FALSE)
+VarCorr(brms_mod3)
+```
+Now the plots look quite good already. 
+
+
+
+### 4.4. Animal model for non-additive components 
+#### 4.4.1. Using brms
+```{r}
+#you have to add this column, basically identical to "animal" column but the model cannot consider two matrices for one variable. One way is to combine the two matrices into one but that is more complicated than just doing this. 
+pheno1$dom = pheno1$animal
+str(pheno1)
+
+bf_neophilia = bf(NeophiliaScore ~ ObjectType - 1 + (1  | gr(animal, cov = Amat)) + (1  | gr(dom, cov = Dmat))+ (1|dam) + (1|FosterID) + (1|PeerGroupID) + (1|IndID))
+
+brms_mod5 = brm(
+  bf_neophilia, 
+  data = pheno1,
+  data2 = list(Amat = Amat, Dmat = Dmat),
+  chains = 2, cores = 6, iter = 15000, 
+  warmup = 5000, thin = 5
+)
+#this already takes awhile....
+
+summary(brms_mod5)
+plot(brms_mod5, ask = FALSE)
+VarCorr(brms_mod5)
+```
+The plots look better already. Increasing the thinning and iterations definitely improves this. 
+
+```{r}
+
+bf_neophilia = bf(NeophiliaScore ~ ObjectType - 1 + (1  | gr(animal, cov = Amat)) + (1  | gr(dom, cov = Dmat))+ (1|dam) + (1|FosterID) + (1|PeerGroupID) + (1|IndID))
+
+brms_mod6 = brm(
+  bf_neophilia, 
+  data = pheno1,
+  data2 = list(Amat = Amat, Dmat = Dmat),
+  chains = 2, cores = 8, iter = 50000, 
+  warmup = 5000, thin = 20
+)
+
+
+summary(brms_mod6)
+plot(brms_mod6, ask = FALSE)
+VarCorr(brms_mod6)
+```
+
+Now the plot looks really good. We demonstrate again how to get the variance components
+
+```{r}
+v_animal=(VarCorr(brms_mod6, summary = FALSE)$animal$sd)^2
+v_dam = (VarCorr(brms_mod6, summary = FALSE)$dam$sd)^2
+v_foster = (VarCorr(brms_mod6, summary = FALSE)$FosterID$sd)^2
+v_peer = (VarCorr(brms_mod6, summary = FALSE)$PeerGroupID$sd)^2
+v_ind = (VarCorr(brms_mod6, summary = FALSE)$IndID$sd)^2
+v_dom = (VarCorr(brms_mod6, summary = FALSE)$dom$sd)^2
+v_res = (VarCorr(brms_mod6, summary = FALSE)$residual$sd)^2
+
+V_p = v_animal + v_dam + v_foster + v_peer + v_ind + v_dom + v_res
+
+
+h.neophilia = as.mcmc(v_animal[, 1] / V_p[, 1])
+dom.neophilia = as.mcmc(v_dom[, 1] / V_p[, 1])
+V.dam = as.mcmc(v_dam / V_p[, 1])
+V.foster = as.mcmc(v_foster / V_p[, 1])
+V.peer = as.mcmc(v_peer / V_p[, 1])
+V.ind = as.mcmc(v_ind / V_p[, 1])
+V.res = as.mcmc(v_res / V_p[, 1])
+
+summary(h.neophilia)
+plot(h.neophilia)
+
+summary(dom.neophilia)
+plot(dom.neophilia)
+
+summary(V.dam)
+plot(V.dam)
+
+summary(V.ind)
+summary(V.foster)
+summary(V.peer)
+summary(V.res)
+
+```
+
+
+#### 4.4.2. Using MCMCglmm
+```{r}
+
+prior = list(G = list(G1 = list(V = phenvar/6, nu = 0.002),
+					  G2 = list(V = phenvar/6, nu = 0.002),
+					  G3 = list(V = phenvar/6, nu = 0.002),
+					  G4 = list(V = phenvar/6, nu = 0.002),
+					  G5 = list(V = phenvar/6, nu = 0.002),
+					  G6 = list(V = phenvar/6, nu = 0.002)),
+			 R = list(V = phenvar/6, nu = 0.002))
+mod.chain1 = MCMCglmm(NeophiliaScore ~ ObjectType - 1, random = ~ animal + dom + dam + FosterID + PeerGroupID + IndID, 
+	data=pheno1, pedigree = ped1, ginverse = list(dom=Dmat),
+	nitt=30000, thin=20, burnin=5000, 
+	start = list(QUASI=FALSE),
+	prior=prior)
+mod.chain2 = MCMCglmm(NeophiliaScore ~ ObjectType - 1, random = ~ animal + dom +  dam + FosterID + PeerGroupID + IndID, 
+	data=pheno1, pedigree = ped1, ginverse = list(dom=Dmat),
+	nitt=30000, thin=20, burnin=5000, 
+	start = list(QUASI=FALSE),
+	prior=prior)
+```
+
+Post processing similarly as above:
+```{r}
+mcmcmod = function(Sol, VCV) {
+	mychain = mcmc(data=cbind(Sol, 
+				Vp = VCV[,"animal"] + VCV[,"dom"] + VCV[,"dam"] + VCV[,"FosterID"] + VCV[,"PeerGroupID"] + VCV[,"IndID"] + VCV[,"units"]),
+			  start=attr(VCV, "mcpar")[1],
+			  end=attr(VCV, "mcpar")[2],
+			  thin=attr(VCV, "mcpar")[3])
+	mychain = mcmc(data=cbind(mychain, 
+				AnimalComp = VCV[,"animal"]   / mychain[,"Vp"],
+				DomComp = VCV[,"dom"]   / mychain[,"Vp"],
+				MotherComp = VCV[,"dam"] / mychain[,"Vp"],
+				FosterComp = VCV[,"FosterID"] / mychain[,"Vp"],
+				PeerComp   = VCV[,"PeerGroupID"] / mychain[,"Vp"],
+				IndComp    = VCV[,"IndID"]    / mychain[,"Vp"],
+				ResidComp  = VCV[,"units"]    / mychain[,"Vp"]),
+			  start=attr(VCV, "mcpar")[1],
+			  end=attr(VCV, "mcpar")[2],
+			  thin=attr(VCV, "mcpar")[3])
+}
+chain1 = mcmcmod(mod.chain1$Sol, mod.chain1$VCV)
+chain2 = mcmcmod(mod.chain2$Sol, mod.chain2$VCV)
+chains = mcmc.list(chain1, chain2)
+plot(chains, ask=F)
+posterior.mode(chains)
+HPDinterval(chains)
+summary(chains)
+```
+
+### Reading trace plots and Troubleshooting  
+
+Usually one would run 2 chains, the good sign is that the two chains mix well, creating "hairy caterpillar". 
+
+#### Trouble 1: 
+chains not mixing, possibly indicating convergence issue --> this shows that 2 chains are "climbing" different peaks --> running more iterations or increase burn-in 
+#### Trouble2: 
+chains jump up and down, possibly indicating multicorrelation --> increase iterations to 10 or 100 fold and increase more thinning 
+#### Trouble3: 
+drifting in the beginning --> burn-in is too short, the parameters have not found the peak yet. 
+#### Trouble4: 
+strange pattern of chains going up and down after short intervals --> not enough information in the data, i.e, you are including in the model two components that are identical so there is nothing to distinguish --> not much you can do here ...
+#### Trouble5: 
+the SD plots ideally should have a peak and normal distribution. However, it can get to have no peak but rather broad. This may be showing the problem of confounder in the model, that the model cannot distinguish between the confounder and the variable. 
+#### Trouble6: 
+the distribution of the variable is not normal. When distribution is normal, it makes little difference when you use mean, median, mode for parameter estimation. When it is skewed, it does make big difference, for example, mean vs median would be different result. 
+#### Trouble7:
+low effective sample size (brms) --> it may indicate that the posterior inference is less reliable or accurate
+  --> increase the number of posterior samples: This is a straightforward way to increase the effective sample size, as more independent samples from the posterior distribution are available for analysis.
+  --> improve the mixing of the Markov chain: if the autocorrelation between samples is high, it may indicate that the Markov chain is not mixing well, and the samples are not independent. 
+  --> use a more efficient sampling algorithm: 
+    * in BRMS, the default sampling algorithm used to fit Bayesian models is the No-U-Turn Sampler (NUTS), which is a variant of Hamiltonian Monte Carlo (HMC) algorithm.
+    * NUTS is an efficient and flexible sampling algorithm that can handle complex models with correlated and high-dimensional parameters. It uses the gradient of the log posterior density to simulate Hamiltonian dynamics, which helps the algorithm explore the posterior distribution more efficiently and with fewer iterations compared to other MCMC algorithms.
+    * In addition to NUTS, BRMS also supports other sampling algorithms, such as the Metropolis-adjusted Langevin algorithm (MALA), the adaptive Metropolis (AM), and the slice sampling algorithm.
+  --> simplify the model: if the model is too complex, it may result in a low effective sample size due to high autocorrelation or slow mixing. 
+
+
+
