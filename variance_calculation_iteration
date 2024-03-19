@@ -1,0 +1,89 @@
+#!/usr/bin/env Rscript
+
+
+# Load required packages
+library(brms)
+library(nadiv)
+library(MCMCglmm)
+library(coda)
+
+# Load gene expression data (assuming it's stored in a data frame called 'counts')
+load("counts.RData")
+
+# Load additive and dominance matrices
+# Assuming Amat and Dmat are already calculated or loaded from files
+Amat = ... # Calculate or load Amat
+Dmat = ... # Calculate or load Dmat
+batch_info #batch ID column - sample ID column
+dam_info #mother plant ID column - sample ID column 
+
+#for myfile df, rownames are sample names, colnames are genes
+#st gene index, col1 f.e.
+#end gene index, col 1000 f.e. if you want to run 1000 genes, i.e. phenotypes first
+#batch_info has one "animal" column (sample name) and "batch" info
+#dam info similarly
+
+variancesCalc = function(myfile, st, end, batch_info, dam_info) {
+    out1 = NULL
+    counts = myfile[,st:end] # subset how many genes you want in this loop
+    for (iter in 1: length(colnames(counts))) {
+        temp = as.data.frame(counts[,iter]) # take genes one by one
+        gene = colnames(counts)[iter] # get gene name
+        colnames(temp) = c("counts" )
+        temp$animal = as.character(rownames(temp))
+        temp$dom = as.character(rownames(temp))
+        temp$counts = as.numeric(temp$counts)
+        temp$batch = batch_info$batch[match(temp$animal, batch_info$animal)] 
+        temp$batch = factor(temp$batch)  # Ensure batch is a factor
+        temp$dam = dam_info$dam[match(temp$animal, dam_info$animal)] 
+        temp$dam = factor(temp$dam)  # Ensure dam is a factor
+        
+        myformula = brmsformula(counts ~ 1 + (1  | gr(animal, cov = Amat)) +(1  | gr(dom, cov = Dmat))+ (1|dam) + (1|Batch))
+        fit = brm(myformula, 
+               data = temp,
+               data2 = list(Amat = Amat, Dmat = Dmat),
+               chains = 2, cores = 8, iter = 200000, warmup = 5000, thin = 50
+               )
+               
+        summary_stats = summary(fit)
+        Va = median(unlist(VarCorr(fit, summary = FALSE)$animal))
+        Vd = median(unlist(VarCorr(fit, summary = FALSE)$dom))
+        Vr = median(unlist(VarCorr(fit, summary = FALSE)$residual))
+        Vm = median(unlist(VarCorr(fit, summary = FALSE)$dam))
+        Vb = median(unlist(VarCorr(fit, summary = FALSE)$batch))
+        ha = Va / (Va + Vm + Vr + Vd  + Vb)
+        hd = Vd / (Va + Vm + Vr + Vd  + Vb)
+        hr = Vr / (Va + Vm + Vr + Vd  + Vb)
+        hm = Vm / (Va + Vm + Vr + Vd  + Vb)
+        hb = Vb / (Va + Vm + Vr + Vd  + Vb)
+        sdA = sd(unlist(VarCorr(fit, summary = FALSE)$animal))
+        sdD = sd(unlist(VarCorr(fit, summary = FALSE)$dom))
+        sdR = sd(unlist(VarCorr(fit, summary = FALSE)$residual))
+        sdM = sd(unlist(VarCorr(fit, summary = FALSE)$dam))
+        sdB = sd(unlist(VarCorr(fit, summary = FALSE)$batch))
+        RA = summary(fit)$random$animal$Rhat
+        RD = summary(fit)$random$dom$Rhat
+        RM = summary(fit)$random$dam$Rhat
+        RR = summary(fit)$random$residual$Rhat
+        RB = summary(fit)$random$batch$Rhat 
+        outp = c(as.character(gene), h2, hd, hr, hm, hb, sdA, sdD, sdM, sdR, sdB, RA, RD, RM, RR, RB)
+        out1 = rbind(out1, outp)
+    }
+    colnames(out1) = c("Gene", "Va", "Vd", "Vm", "Vr", "Vbatch", "h2", "dom", "maternal","residual", "batch", "sdA", "sdD", "sdM", "sdR", "sdB", "RA", "RD", "RM", "RR", "RB")
+    return(out1)
+}
+
+
+# Function to print results to a CSV file
+
+csvprint = function(x, nameP, row.names=FALSE, col.names=TRUE) {
+  write.table(x, file = nameP, append=FALSE, eol='\n', sep="\t", na = "NA", dec='.', row.names=FALSE, col.names=TRUE)
+}
+
+#Apply the function
+#pick the index and run the function
+start = 1
+end = 1000
+variances = variancesCalc(counts, start, end, batch_info, dam_info)
+csvprint(variances, paste("variances", start, end, "csv", sep="."))
+
