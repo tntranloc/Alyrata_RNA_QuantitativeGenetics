@@ -1,5 +1,5 @@
 #### Authors: Nhu L.T.Tran
-#### Email: tntranloc@gmail.com
+#### Email: ntran5@uni-koeln.de
 #### Last updated: 30.08.2024
 
 ### Collected scripts for my PhD project in Quantitative Genetics in plant transcriptome and fitness. 
