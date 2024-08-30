@@ -1,4 +1,16 @@
 ```python
+# A workflow using python computer vision library to analyse plant images
+# required input is image with good resolution, pots arranged in proper rows and columns
+# output has many parameters # check here for more details # https://plantcv.readthedocs.io/en/stable/output_measurements/
+
+# This example shows how to measure rosette area, axes length, etc.
+# be flexible and use it for other purpose
+# see another application such as measuring leaf serration # check plantCV_computervision_leafmorphology.md
+
+```
+
+
+```python
 import plantcv as pcv 
 import pandas as pd
 import os
@@ -24,20 +36,12 @@ import os
 
 
 ```python
-os.chdir("/Users/nhutran/Documents/batch1")
+os.chdir("/set/directory/")
 ```
 
 
 ```python
 ### batch 1- different time points ###
-```
-
-
-```python
-#os.chdir("/Users/nhutran/Documents/batch1/24.10")
-#os.chdir("/Users/nhutran/Documents/batch1/30.10")
-#os.chdir("/Users/nhutran/Documents/batch1/06.11")
-os.chdir("/Users/nhutran/Documents/batch1/13.11")
 ```
 
 
@@ -70,13 +74,13 @@ pcv.params.text_thickness = 20
 
 
 ```python
+# Load image in
 # Inputs:
 #   filename = Image file to be read in 
 #   mode     = How to read in the image; either 'native' (default), 
 #              'rgb', 'gray', 'csv', or 'envi'
 img, path, filename = pcv.readimage(filename="/Users/nhutran/Documents/batch1/13.11/G.JPG")
 ```
-
 
     
 ![png](output_9_0.png)
@@ -119,18 +123,18 @@ scaled_img = cv2.resize(img, None, fx=scaling_factor, fy=scaling_factor)
 
 
 ```python
+# Visualise different colour channel
 colorspaces = pcv.visualize.colorspaces(rgb_img=scaled_img, original_img=False)
 
 ```
-
 
     
 ![png](output_14_0.png)
     
 
 
-
 ```python
+# channel a is selected as it visualised plants the best
 a = pcv.rgb2gray_lab(rgb_img=scaled_img, channel='a')
 ```
 
@@ -142,6 +146,10 @@ a = pcv.rgb2gray_lab(rgb_img=scaled_img, channel='a')
 
 
 ```python
+# convert images in binary
+# tweaking threshold around in case of noisy or less noisy background
+    # the higher the threshold is, the more noise it removes
+    # be careful as it can also remove the plant part. if set too high
 a_thresh = pcv.threshold.binary(gray_img=a, threshold=110, object_type='dark')
 
 ```
@@ -165,6 +173,9 @@ a_fill = pcv.fill(bin_img=a_thresh, size=10)
 
 
 ```python
+# define the grids
+    # here 24 pots, 4 rows * 6 columns
+    # adjust accordingly to your tray setup
 rois = pcv.roi.auto_grid(mask=a_fill, nrows=4, ncols=6, img=scaled_img)
 
 ```
@@ -182,14 +193,13 @@ labeled_mask, num_plants = pcv.create_labels(mask=a_fill, rois=rois, roi_type="p
 
 ```
 
-
     
 ![png](output_19_0.png)
     
 
 
-
 ```python
+# visualise how the plants are captured
 shape_img = pcv.analyze.size(img=scaled_img, labeled_mask=labeled_mask, n_labels=24)
 
 ```
@@ -199,44 +209,22 @@ shape_img = pcv.analyze.size(img=scaled_img, labeled_mask=labeled_mask, n_labels
 ![png](output_20_0.png)
     
 
-
-
 ```python
-
-```
-
-
-```python
+# Save the results
+    # this will be a json file
+    # go to any json to csv converter to convert this json file to csv for downstream analysis 
 pcv.outputs.save_results(filename='/Users/nhutran/Documents/batch1/b1_results/G_1311')
 ```
 
 
 ```python
-
+######### Another example with my Batch 2 ########
+######## different tray set up ########
 ```
 
 
 ```python
-######### My Batch 2 ########
-```
-
-
-```python
-os.chdir("/Users/nhutran/Documents/batch2")
-```
-
-
-```python
-### batch 2- different time points ###
-```
-
-
-```python
-os.chdir("/Users/nhutran/Documents/batch2/25.10")
-#os.chdir("/Users/nhutran/Documents/batch2/31.10")
-#os.chdir("/Users/nhutran/Documents/batch2/06.11")
-#os.chdir("/Users/nhutran/Documents/batch2/13.11")
-#os.chdir("/Users/nhutran/Documents/batch2/20.11")
+os.chdir("set/directory/")
 ```
 
 
@@ -358,6 +346,7 @@ a_fill = pcv.fill(bin_img=a_thresh, size=10)
 
 
 ```python
+# here I have 15 pots, 3 rows * 5 columns
 rois = pcv.roi.auto_grid(mask=a_fill, nrows=3, ncols=5, img=scaled_img)
 
 ```
@@ -405,7 +394,7 @@ pcv.outputs.save_results(filename='/Users/nhutran/Documents/batch2/b2_results/L_
 
 
 ```python
-#### My batch 3 - different time points ####
+#### Another example with My batch 3 - different time points ####
 ```
 
 
@@ -573,17 +562,3 @@ shape_img = pcv.analyze.size(img=scaled_img, labeled_mask=labeled_mask, n_labels
 pcv.outputs.save_results(filename='/Users/nhutran/Documents/batch3/b3_results/O_2011')
 ```
 
-
-```python
-
-```
-
-
-```python
-
-```
-
-
-```python
-
-```
