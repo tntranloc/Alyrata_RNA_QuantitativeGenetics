@@ -1,4 +1,10 @@
 ```python
+# Visualising Decomposition of Genotypic Variance at a Locus
+# according to Figure 3.2 # chapter 3 Components of Phenotypic Values and Variances, Quantitative Genetics, Armando Caballero ISBN 978-1-108-72235-3
+   # Values of the average effect of allele substitution (alpha( and the genetic components additive variance and dominance variance (Va and Vd)
+```
+
+```python
 import numpy as np
 import matplotlib as mpl
 import os
@@ -28,10 +34,10 @@ plt.rcParams["font.size"] = 12
 
 
 ```python
-#make this example reproducible
-np.random.seed(1)
+## make this example reproducible
+np.random.seed(42)
 
-#generate array of 1000 values that follow uniform distribution with min=0 and max=1
+## Generate array of 1000 values that follow uniform distribution with min=0 and max=1
 
 ######FULL ADDITIVITY, h= 0.5, allele substitution effect = a*0.5 (as d = 0, h = 0.5) #######
 ##allele substitution effect alpha = ah - 2dq
@@ -83,8 +89,8 @@ fig1 = sns.lmplot(x='p', y='value', hue = 'variable',
 
 
 ```python
-##FULL dominance, h= 1, 
-#allele substitution effect alpha =  (ah-2dq)
+###### FULL DOMINANCE, h= 1, ######
+### allele substitution effect alpha =  (ah-2dq)###
 ```
 
 
@@ -220,7 +226,7 @@ fig5 = sns.lmplot(x='p', y='value', hue = 'variable',
 
 
 ```python
-#Under-dominance h < -1
+###### UNDER-DOMINANCE h < -1 ######
 
 p = np.random.uniform(low=0, high=1, size=1000)
 q = 1-p
@@ -252,7 +258,7 @@ fig6 = sns.lmplot(x='p', y='value', hue = 'variable',
 
 
 ```python
-#Over dominance h > 1
+###### OVER DOMINANCE h > 1 ######
 
 p = np.random.uniform(low=0, high=1, size=1000)
 q = 1-p
@@ -292,15 +298,6 @@ os.chdir('/Users/nhutran/Documents/PhD/epidom/model_plots/Epistasis')
 fig7.savefig('Additive_var_over_dominance.pdf')
 ```
 
-
-```python
-###############################################################
-```
-
-
-```python
-###############################################################
-```
 
 
 ```python
@@ -579,21 +576,6 @@ r11.dtypes
 sns.set_style("whitegrid")
 sns.catplot(data=r11, x="p", y="value", hue="variable", kind="bar").set(title = "r = 0.9") # r = 0.9
 ```
-
-    /Users/nhutran/opt/anaconda3/lib/python3.9/site-packages/pandas/io/formats/format.py:1429: FutureWarning:
-    
-    Index.ravel returning ndarray is deprecated; in a future version this will return a view on self.
-    
-
-
-
-
-
-    <seaborn.axisgrid.FacetGrid at 0x7fd21a5319d0>
-
-
-
-
     
 ![png](output_42_2.png)
     
@@ -604,47 +586,15 @@ sns.catplot(data=r11, x="p", y="value", hue="variable", kind="bar").set(title = 
 sns.set_style("whitegrid")
 sns.catplot(data=r11, x="p", y="value", hue="variable", kind="bar").set(title = "r = 0.5") # r = 0.5
 ```
-
-    /Users/nhutran/opt/anaconda3/lib/python3.9/site-packages/pandas/io/formats/format.py:1429: FutureWarning:
-    
-    Index.ravel returning ndarray is deprecated; in a future version this will return a view on self.
-    
-
-
-
-
-
-    <seaborn.axisgrid.FacetGrid at 0x7fd23def7970>
-
-
-
-
     
 ![png](output_43_2.png)
     
-
-
 
 ```python
 sns.set_style("whitegrid")
 sns.catplot(data=r11, x="p", y="value", hue="variable", kind="bar").set(title = "r = 0.1") # r = 0.1
 ```
 
-    /Users/nhutran/opt/anaconda3/lib/python3.9/site-packages/pandas/io/formats/format.py:1429: FutureWarning:
-    
-    Index.ravel returning ndarray is deprecated; in a future version this will return a view on self.
-    
-
-
-
-
-
-    <seaborn.axisgrid.FacetGrid at 0x7fd1eb7448b0>
-
-
-
-
-    
 ![png](output_44_2.png)
     
 
