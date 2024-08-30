@@ -1,9 +1,14 @@
+```python
+# A workflow using python computer vision library to analyse plant images
+# required input is leaf image with good resolution, leaf arranged in proper rows and columns
+# output has many parameters # check here for more details # https://plantcv.readthedocs.io/en/stable/output_measurements/
 
-
-
-
-
-   
+# This example shows how to measure leaf area 
+# divide true area by convex hull area
+   # for simple leaf: ratio = 1 or approaching 1
+   # for serrated leaf: the more serration the lower the ratio
+# Read plantCV_computervision_phenotyping.md first before this one for more context
+```
 
 
 ```python
