@@ -27,10 +27,12 @@ library(brms)
 
 ## 2. Loading the data
 
+Please find all example data in folder "AnimalModel_collected_scripts_exampleData"
+
 ### 2.1. Pedigree data
 
 ```{r}
-ped = read.table("/Users/nhutran/Documents/PhD/Working/Coding/TutorAnimalModel/HS_Jena2023/Pedigree_ZebraFinch2.txt", header = T)
+ped = read.table(".../Pedigree_ZebraFinch2.txt", header = T)
 head(ped)
 names(ped) = c("id", "dam", "sire")
 
@@ -93,7 +95,7 @@ str(ped2)
 
 ### 2.2. Phenotype data
 ```{r }
-pheno1 = read.table("/Users/nhutran/Documents/PhD/Working/Coding/TutorAnimalModel/HS_Jena2023/Neophilia_ZebraFinches.txt", header = T)
+pheno1 = read.table(".../Neophilia_ZebraFinches.txt", header = T)
 str(pheno1)
 ```
 
