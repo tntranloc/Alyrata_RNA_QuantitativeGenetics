@@ -1,7 +1,7 @@
 ---
 title: "AnimalModel_Schielzeth_Lab_Jena_20230309"
 author: "Nhu L.T. Tran"
-abstract: "Collected practice script of animal model using different packages"
+abstract: "Collected practice script of Animal Model using different packages"
 date: "2023-03-09"
 output: html_document
 ---
