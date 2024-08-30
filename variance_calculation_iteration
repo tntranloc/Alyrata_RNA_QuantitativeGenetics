@@ -1,89 +1,157 @@
-#!/usr/bin/env Rscript
+## This script runs in chunks, given by start and end in the function
+## Last modified 30 August 2024
+## Nhu LT Tran
+## on RNA count data
 
+## Data strcuture
+    
+    ##### Main data matrix #####
+    ## rownames are sample name
+    ## colnames are gene name
+    ## values are normalised read count (I used DESeq2 median-to-mean ratios method)
+   
+    ##### Random effects #####
+    ## two columns: one is "animal" with sample ID, one is name of the random effect
+    ## f.e.: batch_info has column "animal" and "batch"
+    ## make sure it's "factor" when needed
 
-# Load required packages
+## Package required 
+    ## brms to run the model
+    ## nadiv to create Additive and Dominance matrices before hand
+        ## Note that Amat can be saved as txt by write.table() in R
+        ## but Dmat must be written by writeMM() from R's Matrix package, and read by readMM function
+        #### SEE the preparing_animal_model_input.R script regarding how to create the matrices  
+
+## This script can be ran on cluster 
+## It can skip existing file, and output individual files for each gene (memory efficient)
+
+#####################################
+####### Beginning of R script #######
+
+## Create a temporary directory ## do NOT skip this!
+temp_dir = “/path/to/your/main/directory/cheopsusername/tmp”
+Sys.setenv(TMPDIR = temp_dir)
+
+## Load libraries 
 library(brms)
-library(nadiv)
-library(MCMCglmm)
-library(coda)
+library(Matrix) # to load Dominance matrix
 
-# Load gene expression data (assuming it's stored in a data frame called 'counts')
-load("counts.RData")
+setwd(“/path/to/your/working/directory/”)
+data = read.csv(“/path/to/your/directory/your_count_table.csv”, header= T)
+## cleaning up the matrix, as rownames become first column "X" when loading in
+rownames(data) = data$X
+data$X= as.numeric(data$X)
+# example script for extracting intra-population, with ID less than 400
+data_intra = subset(data, data$X < 400)
+data_intra = data_intra[,-1] # remove "X" column
 
 # Load additive and dominance matrices
-# Assuming Amat and Dmat are already calculated or loaded from files
-Amat = ... # Calculate or load Amat
-Dmat = ... # Calculate or load Dmat
-batch_info #batch ID column - sample ID column
-dam_info #mother plant ID column - sample ID column 
+Amat_intra = read.csv(“/path/to/your/directory/your_Amatrix.csv”, header = T)
+Dmat_intra = readMM(“/path/to/your/directory/your_Dmatrix.csv”)
 
-#for myfile df, rownames are sample names, colnames are genes
-#st gene index, col1 f.e.
-#end gene index, col 1000 f.e. if you want to run 1000 genes, i.e. phenotypes first
-#batch_info has one "animal" column (sample name) and "batch" info
-#dam info similarly
+# same cleaning up as earlier
+a = Amat_intra$X 
+Amat_intra = Amat_intra[,-1]
+colnames(Amat_intra) = a
+rownames(Amat_intra) = a
+rm(a)
+colnames(Dmat_intra) = colnames(Amat_intra)
+rownames(Dmat_intra) = rownames(Amat_intra)
 
-variancesCalc = function(myfile, st, end, batch_info, dam_info) {
-    out1 = NULL
-    counts = myfile[,st:end] # subset how many genes you want in this loop
-    for (iter in 1: length(colnames(counts))) {
-        temp = as.data.frame(counts[,iter]) # take genes one by one
-        gene = colnames(counts)[iter] # get gene name
-        colnames(temp) = c("counts" )
-        temp$animal = as.character(rownames(temp))
-        temp$dom = as.character(rownames(temp))
-        temp$counts = as.numeric(temp$counts)
-        temp$batch = batch_info$batch[match(temp$animal, batch_info$animal)] 
-        temp$batch = factor(temp$batch)  # Ensure batch is a factor
-        temp$dam = dam_info$dam[match(temp$animal, dam_info$animal)] 
-        temp$dam = factor(temp$dam)  # Ensure dam is a factor
-        
-        myformula = brmsformula(counts ~ 1 + (1  | gr(animal, cov = Amat)) +(1  | gr(dom, cov = Dmat))+ (1|dam) + (1|Batch))
-        fit = brm(myformula, 
-               data = temp,
-               data2 = list(Amat = Amat, Dmat = Dmat),
-               chains = 2, cores = 8, iter = 200000, warmup = 5000, thin = 50
-               )
-               
-        summary_stats = summary(fit)
-        Va = median(unlist(VarCorr(fit, summary = FALSE)$animal))
-        Vd = median(unlist(VarCorr(fit, summary = FALSE)$dom))
-        Vr = median(unlist(VarCorr(fit, summary = FALSE)$residual))
-        Vm = median(unlist(VarCorr(fit, summary = FALSE)$dam))
-        Vb = median(unlist(VarCorr(fit, summary = FALSE)$batch))
-        ha = Va / (Va + Vm + Vr + Vd  + Vb)
-        hd = Vd / (Va + Vm + Vr + Vd  + Vb)
-        hr = Vr / (Va + Vm + Vr + Vd  + Vb)
-        hm = Vm / (Va + Vm + Vr + Vd  + Vb)
-        hb = Vb / (Va + Vm + Vr + Vd  + Vb)
-        sdA = sd(unlist(VarCorr(fit, summary = FALSE)$animal))
-        sdD = sd(unlist(VarCorr(fit, summary = FALSE)$dom))
-        sdR = sd(unlist(VarCorr(fit, summary = FALSE)$residual))
-        sdM = sd(unlist(VarCorr(fit, summary = FALSE)$dam))
-        sdB = sd(unlist(VarCorr(fit, summary = FALSE)$batch))
-        RA = summary(fit)$random$animal$Rhat
-        RD = summary(fit)$random$dom$Rhat
-        RM = summary(fit)$random$dam$Rhat
-        RR = summary(fit)$random$residual$Rhat
-        RB = summary(fit)$random$batch$Rhat 
-        outp = c(as.character(gene), h2, hd, hr, hm, hb, sdA, sdD, sdM, sdR, sdB, RA, RD, RM, RR, RB)
-        out1 = rbind(out1, outp)
+# Load random effects
+    # here I have so called sowing batch, dam (maternal), and tray ID as random effects
+batch_info_intra = read.csv(“/path/to/your/directory/your_batch_info.csv”, header = T)
+dam_info_intra = read.csv(“/path/to/your/directory/your_dam_info.csv”, header = T)
+tray_info_intra = read.csv(“/path/to/your/directory/your_tray_info.csv”, header = T)
+
+# renaming columns 
+colnames(batch_info_intra)[1] = “animal”
+colnames(dam_info_intra)[1] = “animal”
+colnames(tray_info_intra)[1] = “animal”
+print(head(batch_info_intra))
+print(head(dam_info_intra))
+
+
+# set the global Amat and Dmat variables which are used in the function below
+    # if not doing this, remember to provide Amat and Dmat args in the function below
+Amat = Amat_intra
+Dmat = Dmat_intra
+
+
+## The function ##
+variancesCalc = function(myfile, st, end, batch_info, dam_info, tray_info, outdir, individual_files = FALSE) {
+  out1 = list()
+  counts = myfile[, st:end]
+
+  for (iter in 1:length(colnames(counts))) {
+    temp = as.data.frame(counts[, iter])
+    gene = colnames(counts)[iter]
+    output_gene_file = paste0(outdir, “/output_intra_“, gene, “.csv”)
+
+    # Skip processing if the output file already exists
+    if (individual_files && file.exists(output_gene_file)) {
+      next
     }
-    colnames(out1) = c("Gene", "Va", "Vd", "Vm", "Vr", "Vbatch", "h2", "dom", "maternal","residual", "batch", "sdA", "sdD", "sdM", "sdR", "sdB", "RA", "RD", "RM", "RR", "RB")
-    return(out1)
+
+    colnames(temp) = c(“counts”)
+    temp$animal = as.character(rownames(counts))
+    temp$dom = as.character(rownames(counts))
+    temp$counts = as.numeric(temp$counts)
+    temp$batch = batch_info$batch[match(temp$animal, batch_info$animal)]
+    temp$batch = factor(temp$batch)
+    temp$dam = dam_info$dam[match(temp$animal, dam_info$animal)]
+    temp$dam = factor(temp$dam)
+    temp$tray = tray_info$tray[match(temp$animal, tray_info$animal)]
+    temp$tray = factor(temp$tray)
+    print(head(temp))
+
+    myformula = brmsformula(counts ~ 1 + (1 | gr(animal, cov = Amat)) + (1 | gr(dom, cov = Dmat)) + (1 | dam) + (1 | batch)) + (1 | tray))
+    fit = brm(myformula,
+              data = temp, family = skew_normal(),
+              data2 = list(Amat = Amat, Dmat = Dmat),
+              chains = 4, threads = threading(4), cores = 4, iter = 4000, warmup = 1000, thin = 2
+    )
+    Va = median(unlist(VarCorr(fit, summary = FALSE)$animal))
+    Vd = median(unlist(VarCorr(fit, summary = FALSE)$dom))
+    Vr = median(unlist(VarCorr(fit, summary = FALSE)$residual))
+    Vm = median(unlist(VarCorr(fit, summary = FALSE)$dam))
+    Vb = median(unlist(VarCorr(fit, summary = FALSE)$batch))
+    ha = round(Va / (Va + Vm + Vr + Vd + Vb), digits = 2)
+    hd = round(Vd / (Va + Vm + Vr + Vd + Vb), digits = 2)
+    hr = round(Vr / (Va + Vm + Vr + Vd + Vb), digits = 2)
+    hm = round(Vm / (Va + Vm + Vr + Vd + Vb), digits = 2)
+    hb = round(Vb / (Va + Vm + Vr + Vd + Vb), digits = 2)
+    sdA = sd(unlist(VarCorr(fit, summary = FALSE)$animal))
+    sdD = sd(unlist(VarCorr(fit, summary = FALSE)$dom))
+    sdR = sd(unlist(VarCorr(fit, summary = FALSE)$residual))
+    sdM = sd(unlist(VarCorr(fit, summary = FALSE)$dam))
+    sdB = sd(unlist(VarCorr(fit, summary = FALSE)$batch))
+    RA = summary(fit)$random$animal$Rhat
+    RD = summary(fit)$random$dom$Rhat
+    RM = summary(fit)$random$dam$Rhat
+    RR = summary(fit)$spec_pars$Rhat
+    RB = summary(fit)$random$batch$Rhat
+
+    outp = c(as.character(gene), Va, Vd, Vm, Vr, Vb, ha, hd, hm, hr, hb, sdA, sdD, sdM, sdR, sdB, RA, RD, RM, RR, RB)
+    out1[[iter]] = outp
+
+    if (individual_files) {
+      individual_output = data.frame(t(outp))
+      write.table(individual_output, file = output_gene_file, sep = ”	“, row.names = FALSE, col.names = TRUE)
+    }
+  }
+  out1_df = do.call(rbind, out1)
+  write.table(out1_df, file = output_file, sep = ”	“, row.names = FALSE, col.names = TRUE)
+
+  return(out1_df)
 }
 
 
-# Function to print results to a CSV file
+## Apply the function
+variancesCalc(data_intra, 801, 1000, batch_info_intra, dam_info_intra, tray_info_intra, “/path/to/your/output/directory”, individual_files = TRUE)
+    ## The function takes data matrix (data_intra), processing column number 801 to 1000 (genes), taking batch info, dam info, and tray info as random effects
+    ## This will create 200 csv files, for gene index 801 and 1000 respectively. 
 
-csvprint = function(x, nameP, row.names=FALSE, col.names=TRUE) {
-  write.table(x, file = nameP, append=FALSE, eol='\n', sep="\t", na = "NA", dec='.', row.names=FALSE, col.names=TRUE)
-}
+## Simply merge the csv for downstream analysis
 
-#Apply the function
-#pick the index and run the function
-start = 1
-end = 1000
-variances = variancesCalc(counts, start, end, batch_info, dam_info)
-csvprint(variances, paste("variances", start, end, "csv", sep="."))
 
