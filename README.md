@@ -9,3 +9,4 @@
 - plot_quantGene_concept_model.md shows how to visualise allele substitution effect and genetic variance components in different scenarios of dominance, additive, underdominance, overdominance, etc
 - genetic_variance_analysis_brms.R is an Rscript to run Animal Model on large scale data such as gene count matrix on cluster
   
+- eQTL_analysis_with_qtltools.sh shows how to perform expression QTL analysis with qtltools
