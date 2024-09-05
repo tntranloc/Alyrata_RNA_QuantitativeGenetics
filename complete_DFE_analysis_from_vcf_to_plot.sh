@@ -116,7 +116,7 @@ with open("cds.fa") as cds_file, open("protein.fa", "w") as protein_file:
         protein_record = SeqRecord(protein_seq, id=record.id, description="translated protein")
         SeqIO.write(protein_record, protein_file, "fasta")
 
-
+##################################
  from Bio import SeqIO
 
 # Input files
@@ -163,5 +163,53 @@ with open(output_fasta, "w") as output_handle:
         output_handle.write(f">{gene_id}\n{sequence}\n")
 
 print(f"Matched sequences have been written to {output_fasta}")
+
+#######################
+#####################
+from Bio import SeqIO
+
+# Input files
+fasta_file = "gene_sequences.fa"  # Your FASTA file with gene names
+gff_file = "annotations.gff"  # Your GFF file with scaffold coordinates
+output_fasta = "scaffold_mapped_sequences.fa"  # Output FASTA with scaffold names
+
+# Dictionary to map gene names to scaffold and coordinates
+gene_to_scaffold = {}
+
+# Parse GFF file to map genes to scaffolds
+with open(gff_file, "r") as gff:
+    for line in gff:
+        if not line.startswith("#"):
+            fields = line.strip().split("\t")
+            chrom = fields[0]  # Scaffold name
+            feature_type = fields[2]  # Feature type (e.g., gene, CDS)
+            start = fields[3]
+            end = fields[4]
+            attributes = fields[8]
+
+            # Extract gene ID from GFF attributes
+            gene_id = None
+            for attr in attributes.split(";"):
+                if attr.startswith("ID="):
+                    gene_id = attr.split("=")[1]
+
+            # Map gene ID to scaffold and coordinates
+            if gene_id and feature_type == "gene":
+                gene_to_scaffold[gene_id] = f"{chrom}:{start}-{end}"
+
+# Parse the FASTA file and rename sequences with scaffold information
+with open(output_fasta, "w") as out_handle:
+    for record in SeqIO.parse(fasta_file, "fasta"):
+        gene_id = record.id
+        if gene_id in gene_to_scaffold:
+            # Rename sequence with scaffold information
+            new_id = gene_to_scaffold[gene_id]
+            record.id = new_id
+            record.description = ""
+            SeqIO.write(record, out_handle, "fasta")
+
+print(f"FASTA file with scaffold names written to {output_fasta}")
+
+######################
 ######## FAST DFE #######
 
