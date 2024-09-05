@@ -1,5 +1,22 @@
 
 
+##### Required softwares/packages #####
+# snpEff, angsd, python with pandas and fastdfe installed
+
+
+
+
+###### Find synonymous and non-synonymous variant sites ######
+
+# install snpeff if needed
+java -jar snpEff.jar download <reference-genome>
+# annotate the vcf with synonymous and non-synonymous sites
+java -jar snpEff.jar -v <reference-genome> input.vcf > annotated.vcf
+
+# filter 
+grep "synonymous_variant" annotated.vcf > synonymous.txt
+grep "missense_variant" annotated.vcf > nonsynonymous.txt
+
 ###### SFS calculation ######
 # Generate site allele frequency (saf) file
 angsd -bam bamlist.txt -doSaf 1 -anc reference.fa -out output -GL 1
@@ -7,12 +24,24 @@ angsd -bam bamlist.txt -doSaf 1 -anc reference.fa -out output -GL 1
 realSFS output.saf.idx -P 4 > output.sfs
   # The output.sfs file contains the estimated SFS for the population
 
-###### Ancestral allele annotation ######
+#### To calculate selected (non-synonymous) and neutral (synonymous) SFS:
 
+# For synonymous (neutral) SFS
+angsd -bam bamlist.txt -doSaf 1 -anc reference.fa -GL 1 -sites synonymous.txt -out sfs_neutral
+
+# For nonsynonymous (selected) SFS
+angsd -bam bamlist.txt -doSaf 1 -anc reference.fa -GL 1 -sites nonsynonymous.txt -out sfs_selected
+
+# Estimate SFS 
+realSFS sfs_neutral.saf.idx > sfs_neutral.sfs
+realSFS sfs_selected.saf.idx > sfs_selected.sfs
+
+###### Ancestral allele annotation ######
+angsd -doAncError 1 -doMaf 1 -anc outgroup.fasta -bam bamlist.txt -out ancestral_out
 ## Output files are
-	1.	MAF file (*.mafs): This file contains allele frequencies at each site.
-	2.	Ancestral state error file (*.ancError): This file provides information on potential errors in ancestral state inference.
-	3.	SAF file (*.saf): This file stores the Site Allele Frequency likelihoods.
+	#1.	MAF file (*.mafs): This file contains allele frequencies at each site.
+	#2.	Ancestral state error file (*.ancError): This file provides information on potential errors in ancestral state inference.
+	#3.	SAF file (*.saf): This file stores the Site Allele Frequency likelihoods.
 
 
 # To create an ancestral allele annotation file for fastDFE using the output files from ANGSD
@@ -28,8 +57,8 @@ realSFS output.saf.idx -P 4 > output.sfs
 #chr1    1000    A       G       A
 #chr1    1050    C       T       C
 
-# A Python script that extracts the ancestral alleles from the MAF and ancestral state error files, 
-  # and creates an ancestral allele annotation file suitable for fastDFE:
+#### A Python script that extracts the ancestral alleles from the MAF and ancestral state error files, 
+  #### and creates an ancestral allele annotation file suitable for fastDFE:
 
   import pandas as pd
 
@@ -76,4 +105,6 @@ print("Ancestral allele annotation file created.")
 	#3.	Output: The ancestral allele annotation is written in a tab-delimited format suitable for fastDFE.
 
 
+
+######## FAST DFE #######
 
