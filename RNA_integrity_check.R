@@ -1,7 +1,8 @@
 ### Check the RNA integrity by checking the covered transcript region
-### Fei 2020223
-### Irina modified Feb-2022
-### This script runs for Athaliana mapping files with Athaliana annotation file
+### Fei He 2020223
+### Irina Calic modified Feb-2022
+### Nhu Tran modified Sep-2024
+### This script runs for Alyrata mapping files with Alyrata annotation file
 ### Read the depth files according to the chr
 ### First, get the depth file from uniquely mapping files by samtools in bash
 # for file in *bam; do
@@ -11,28 +12,28 @@
 # rm temp.bam
 
 ### R part for RNA integrity
-setwd("/media/bene/Genomic_data/Abdul/short_submergence_data/short_submerg_exp_2023/transcriptome/mapping/map_both_with_nemgenome/")
+setwd("/working/dir/")
 
-### Load A.alpina gene annotation
-load("./arabis_nem_chr_changed.RData")  ## We will focus here on gene
-chr <- unique(annotations$V1)
-gene.anno <- subset(annotations, V3 == "gene")
-exon.anno <- subset(annotations, V3 == "exon")
+### Load A.lyrata gene annotation
+#...load annotations
+chr = unique(annotations$V1)
+gene.anno = subset(annotations, V3 == "gene")
+exon.anno = subset(annotations, V3 == "exon")
 
-files <- list.files(pattern = "depth.bam.txt")
+files = list.files(pattern = "depth.bam.txt")
 cat("Files to process:", files, "\n")
 
 ### A function to calculate the proportion of sites in the gene that is covered by more than 1/2 of the mean coverage in a gene 
-calculateProportionCovered <- function(gene.anno, depth) {
-  start <- as.numeric(gene.anno[1])
-  stop <- as.numeric(gene.anno[2])
-  sites <- which(depth[, 1] >= start & depth[, 1] <= stop)  # Get all the sequence depth site for one gene
+calculateProportionCovered = function(gene.anno, depth) {
+  start = as.numeric(gene.anno[1])
+  stop = as.numeric(gene.anno[2])
+  sites = which(depth[, 1] >= start & depth[, 1] <= stop)  # Get all the sequence depth site for one gene
   if (length(sites) == 0) {
-    proportionCovered <- NA
+    proportionCovered = NA
   } else {
-    gene.cover <- depth[sites, 2]  # Depth for one gene
-    mean.cover <- mean(gene.cover)  # Mean coverage
-    covered <- sum(gene.cover >= mean.cover / 2)  # Coverage > 1/2 mean coverage
+    gene.cover = depth[sites, 2]  # Depth for one gene
+    mean.cover = mean(gene.cover)  # Mean coverage
+    covered = sum(gene.cover >= mean.cover / 2)  # Coverage > 1/2 mean coverage
     proportionCovered <- covered / length(gene.cover)  # The proportion of covered to the length of the transcribed region
   }
   return(proportionCovered)  # Return as a number
@@ -40,11 +41,11 @@ calculateProportionCovered <- function(gene.anno, depth) {
 
 ### Parallel calculation in R
 library(parallel)
-start.time <- Sys.time()
-no_cores <- detectCores() - 1  # Using the total number of CPUs - 1
-cl <- makeCluster(no_cores)
+start.time = Sys.time()
+no_cores = detectCores() - 1  # Using the total number of CPUs - 1
+cl = makeCluster(no_cores)
 
-proportionCoveredList <- vector("list", length(files))  # Pre-allocate list for all samples
+proportionCoveredList = vector("list", length(files))  # Pre-allocate list for all samples
 
 for (k in seq_along(files)) {  # Loop through each file
   cat("Processing file:", files[k], "\n")
@@ -117,3 +118,7 @@ dev.off()
 # Showing the median proportion of covered region, to spot the samples that show a problem.
 cat("Median proportion covered per file:\n")
 print(unlist(lapply(proportionCoveredList, median, na.rm = TRUE)))
+
+
+########################### GOOD LUCK ###########################
+
