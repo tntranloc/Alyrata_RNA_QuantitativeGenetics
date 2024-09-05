@@ -105,6 +105,15 @@ print("Ancestral allele annotation file created.")
 	#3.	Output: The ancestral allele annotation is written in a tab-delimited format suitable for fastDFE.
 
 
+from Bio import SeqIO
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
 
+with open("cds.fa") as cds_file, open("protein.fa", "w") as protein_file:
+    for record in SeqIO.parse(cds_file, "fasta"):
+        # Translate CDS sequence to protein
+        protein_seq = record.seq.translate(to_stop=True)
+        protein_record = SeqRecord(protein_seq, id=record.id, description="translated protein")
+        SeqIO.write(protein_record, protein_file, "fasta")
 ######## FAST DFE #######
 
