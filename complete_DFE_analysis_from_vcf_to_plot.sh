@@ -115,5 +115,53 @@ with open("cds.fa") as cds_file, open("protein.fa", "w") as protein_file:
         protein_seq = record.seq.translate(to_stop=True)
         protein_record = SeqRecord(protein_seq, id=record.id, description="translated protein")
         SeqIO.write(protein_record, protein_file, "fasta")
+
+
+ from Bio import SeqIO
+
+# Input files
+fasta_file = "reference.fa"  # Your FASTA file with scaffold-based names
+gff_file = "annotations.gff"  # Your GFF file with gene IDs
+output_fasta = "matched_sequences.fa"  # Output file for matched sequences
+
+# Load FASTA sequences
+scaffold_sequences = SeqIO.to_dict(SeqIO.parse(fasta_file, "fasta"))
+
+# Function to parse GFF and extract regions
+def extract_gene_sequences_from_gff(gff_file, scaffold_sequences):
+    gene_to_sequence = {}
+
+    with open(gff_file, "r") as gff:
+        for line in gff:
+            if not line.startswith("#"):
+                fields = line.strip().split("\t")
+                chrom = fields[0]  # Chromosome or scaffold name
+                feature_type = fields[2]  # Type of the feature (e.g., gene, exon)
+                start = int(fields[3]) - 1  # Start position (0-based)
+                end = int(fields[4])  # End position
+                attributes = fields[8]  # GFF attribute field
+                gene_id = ""
+
+                # Extract gene ID from attributes
+                for attribute in attributes.split(";"):
+                    if attribute.startswith("ID="):
+                        gene_id = attribute.split("=")[1]
+
+                # Get sequence from FASTA using scaffold/coordinate
+                if chrom in scaffold_sequences and feature_type == "gene":
+                    sequence = scaffold_sequences[chrom].seq[start:end]
+                    gene_to_sequence[gene_id] = sequence
+
+    return gene_to_sequence
+
+# Extract the gene sequences from GFF and match with scaffolds
+matched_sequences = extract_gene_sequences_from_gff(gff_file, scaffold_sequences)
+
+# Write the matched sequences to a FASTA file
+with open(output_fasta, "w") as output_handle:
+    for gene_id, sequence in matched_sequences.items():
+        output_handle.write(f">{gene_id}\n{sequence}\n")
+
+print(f"Matched sequences have been written to {output_fasta}")
 ######## FAST DFE #######
 
