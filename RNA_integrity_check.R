@@ -49,25 +49,25 @@ proportionCoveredList = vector("list", length(files))  # Pre-allocate list for a
 
 for (k in seq_along(files)) {  # Loop through each file
   cat("Processing file:", files[k], "\n")
-  proportionCoveredSum <- c()
+  proportionCoveredSum = c()
   
   for (i in 1:8) {  # Loop through chromosomes 1 to 8
-    cmd <- paste("sed 's/Chrom_//g'", files[k], "| awk '{if($1==", i, "&& $3 >4) print $2, $3}'", "> temp1.txt")
+    cmd = paste("sed 's/Chrom_//g'", files[k], "| awk '{if($1==", i, "&& $3 >4) print $2, $3}'", "> temp1.txt")
     cat("Running command:", cmd, "\n")
     system(cmd)
 
     # Check if "temp1.txt" is not empty
     if (file.size("temp1.txt") > 0) {
-      cover.region <- read.table("temp1.txt")
+      cover.region = read.table("temp1.txt")
       cat("File 'temp1.txt' read successfully with", nrow(cover.region), "rows\n")
 
       # Ensure chr[i] exists in mRNA.anno
       if (chr[i] %in% mRNA.anno$V1) {
-        chr.anno <- subset(mRNA.anno, V1 == chr[i], select = c(V4, V5))
-        proportionCovered <- parApply(cl, chr.anno, 1, calculateProportionCovered, depth = cover.region)
+        chr.anno = subset(mRNA.anno, V1 == chr[i], select = c(V4, V5))
+        proportionCovered = parApply(cl, chr.anno, 1, calculateProportionCovered, depth = cover.region)
 
         cat("Chromosome:", i, "Processed\n")
-        proportionCoveredSum <- c(proportionCoveredSum, proportionCovered)
+        proportionCoveredSum = c(proportionCoveredSum, proportionCovered)
       } else {
         cat("Chromosome:", i, "not found in mRNA.anno\n")
       }
@@ -77,11 +77,11 @@ for (k in seq_along(files)) {  # Loop through each file
   }
   
   if (length(proportionCoveredSum) > 0) {
-    proportionCoveredList[[k]] <- proportionCoveredSum
+    proportionCoveredList[[k]] = proportionCoveredSum
     cat("Processed data for file:", files[k], "with", length(proportionCoveredSum), "entries\n")
   } else {
     warning("No data processed for file:", files[k])
-    proportionCoveredList[[k]] <- NA  # Ensure the list entry is not empty
+    proportionCoveredList[[k]] = NA  # Ensure the list entry is not empty
   }
 }
 
@@ -93,7 +93,7 @@ if (length(proportionCoveredList) != length(files)) {
 }
 
 # Assign names to the list using full filenames without extension
-names(proportionCoveredList) <- sub(".depth.bam.txt$", "", files)
+names(proportionCoveredList) = sub(".depth.bam.txt$", "", files)
 
 save(proportionCoveredList, file = "proportionCoveredList.RData")
 
@@ -103,12 +103,12 @@ cat("Total processing time:", Sys.time() - start.time, "\n")
 ### Plot density for all samples
 pdf("temp.pdf")
 if (length(proportionCoveredList) > 0) {
-  cover <- proportionCoveredList[[1]]
-  n <- which(!is.na(cover) & cover < 1)
+  cover = proportionCoveredList[[1]]
+  n = which(!is.na(cover) & cover < 1)
   plot(density(cover[n]), lwd = 2, col = 1, xlab = "% covered transcript", cex.lab = 1.3, main = "", ylim = c(0, 5))
   for (i in 2:length(proportionCoveredList)) {
-    cover <- proportionCoveredList[[i]]
-    n <- which(!is.na(cover) & cover < 1)
+    cover = proportionCoveredList[[i]]
+    n = which(!is.na(cover) & cover < 1)
     lines(density(cover[n]), lwd = 2, col = i)
   }
 }
