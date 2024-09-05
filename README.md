@@ -10,6 +10,8 @@ Main scripts
 - genetic_variance_analysis_brms.R is an Rscript to run Animal Model on large scale data such as gene count matrix on cluster
 - eQTL_analysis_with_qtltools.sh shows how to perform expression QTL analysis with qtltools
 - plantCV_computervision_...md is a Python workflow to analyse plant images in a higher throughput way
+- complete_DFE_from_vcf_to_graph.sh is a bash workflow to calculate distribution of fitness effects, with help how to calculate SFS and generate ancestral allele annotation
 
 Supporting scripts:
 - plot_quantGene_concept_model.md shows how to visualise allele substitution effect and genetic variance components in different scenarios of dominance, additive, underdominance, overdominance, etc
+- RNA_integrity_check.sh shows how to check RNA integrity after mapping
