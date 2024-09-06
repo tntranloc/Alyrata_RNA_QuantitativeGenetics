@@ -20,7 +20,12 @@ grep "missense_variant" annotated.vcf > nonsynonymous.txt
 ./angsd -b fourOutgroup.bamlist -out myFasta -doCounts 1 -snp_pval 0.01 -domaf 1 -domajorminor 1 -gl 2 -rmSNPs 1 -minind 4 -setMinDepthInd 10 -explode 1
 # check https://www.popgen.dk/angsd/index.php/Fasta#Ancestral_fasta_using_multiple_outgroups for more info
 
-
+$ANGSD -b $BASEDIR/sample_lists/$POP'_bams.txt' -ref $REF -anc $ANC -out $BASEDIR/results/$POP \
+                -uniqueOnly 1 -remove_bads 1 -only_proper_pairs 1 -trim 0 -C 50 \
+                -minMapQ 20 -minQ 20 -minInd 5 -setMinDepth 5 -setMaxDepth 60 -doCounts 1 \
+                -GL 1 -doSaf 1
+#check https://github.com/nt246/lcwgs-guide-tutorial/blob/main/tutorial4_summary_stats/markdowns/summary_stats.md#site-frequency-spectrum
+  
 
 ###### SFS calculation ######
 # Generate site allele frequency (saf) file
