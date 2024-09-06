@@ -3,9 +3,6 @@
 ##### Required softwares/packages #####
 # snpEff, angsd, python with pandas and fastdfe installed
 
-
-
-
 ###### Find synonymous and non-synonymous variant sites ######
 
 # install snpeff if needed
@@ -16,6 +13,14 @@ java -jar snpEff.jar -v <reference-genome> input.vcf > annotated.vcf
 # filter 
 grep "synonymous_variant" annotated.vcf > synonymous.txt
 grep "missense_variant" annotated.vcf > nonsynonymous.txt
+
+
+
+### Ancestral fasta using multiple outgroup
+./angsd -b fourOutgroup.bamlist -out myFasta -doCounts 1 -snp_pval 0.01 -domaf 1 -domajorminor 1 -gl 2 -rmSNPs 1 -minind 4 -setMinDepthInd 10 -explode 1
+# check https://www.popgen.dk/angsd/index.php/Fasta#Ancestral_fasta_using_multiple_outgroups for more info
+
+
 
 ###### SFS calculation ######
 # Generate site allele frequency (saf) file
