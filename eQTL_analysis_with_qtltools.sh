@@ -57,8 +57,9 @@ QTLtools cis --vcf genotypes.vcf.gz --bed myPhenotypes.bed.gz --cov covariates.t
 # consider any region less than 5kb is a cis, otherwise trans
 # remember to give window values because the default of qtltools is a huge window
 
-## Run in chunks and parallel on cluster
-..
+## run in chunks and parallel on cluster
+seq 1 20 | parallel -j 4 "QTLtools cis --vcf genotypes.vcf.gz --bed Phenotypes.bed.gz --cov covariates.txt.gz --permute 10000 --chunk {} 20 --window 5000 --out output_prefix_{}_20.txt"
+
 # merge all chunks 
 cat permutations_*_20.txt | gzip -c > permutations_full.txt.gz
 
@@ -71,9 +72,22 @@ Rscript ./script/runFDR_cis.R permutations_all.txt.gz 0.05 permutations_all
 ######## cis eQTL conditional method #########
 QTLtools cis --vcf genotypes.vcf.gz --bed myPhenotypes.bed.gz --cov covariates.txt.gz --mapping permutations_all.thresholds.txt --chunk 12 16 --out conditional_12_16.txt
 
+## run in chunks and parallel on cluster
+seq 1 20 | parallel -j 4 "QTLtools cis --vcf genotypes.vcf.gz --bed myPhenotypes.bed.gz --cov covariates.txt.gz --mapping permutations_all.thresholds.txt --chunk {} 20 --window 5000 --out output_prefix_{}_20.txt"
+
 
 
 ######### trans eQTL #########
+
+## Nominal pass
+QTLtools trans --vcf genotypes.vcf.gz --bed myPhenotypes.bed.gz --nominal --cov covariates.txt.gz --threshold 1e-5 --window 5000 --normal --out output_prefix.txt
+
+## Permutation pass
+seq 1 20 | parallel -j 4 "QTLtools trans --vcf genotypes.vcf.gz --bed myPhenotypes.bed.gz --cov covariates.txt.gz --permute  --normal --window 5000  --out output_prefix_{}.txt --seed {}"
+
+
+
+
 
 
 
