@@ -1,0 +1,75 @@
+## Goal: calculate Ka/Ks for different gene groups 
+## input: cds.fasta of original species and an outgroup, here A.lyrata and A.thaliana respectively
+## output: Ka/Ks result of different gene groups in A.lyrata
+
+
+# If you already have protein sequence, keep this step
+# Step 1: Translate CDS fasta to Protein fasta
+# Tool: Biopython
+# Translating CDS sequences to protein sequences for both original and outgroup samples
+python3 -c "
+from Bio import SeqIO
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
+
+# Translate original CDS to protein
+with open('original_protein.fasta', 'w') as output_handle:
+    for record in SeqIO.parse('original_cds.fasta', 'fasta'):
+        protein_seq = record.seq.translate(to_stop=True)
+        protein_record = SeqRecord(protein_seq, id=record.id, description='translated sequence')
+        SeqIO.write(protein_record, output_handle, 'fasta')
+
+# Translate outgroup CDS to protein
+with open('outgroup_protein.fasta', 'w') as output_handle:
+    for record in SeqIO.parse('outgroup_cds.fasta', 'fasta'):
+        protein_seq = record.seq.translate(to_stop=True)
+        protein_record = SeqRecord(protein_seq, id=record.id, description='translated sequence')
+        SeqIO.write(protein_record, output_handle, 'fasta')
+"
+
+# Step 2: Find orthologues with OrthoFinder
+# Tool: OrthoFinder
+# Running OrthoFinder to find orthologues between original and outgroup
+orthofinder -f ./ -t 8
+# The input directory should contain both 'original_protein.fasta' and 'outgroup_protein.fasta'
+
+# Step 3: Eliminate redundant orthologues by BLAST and set similarity threshold
+# Tool: BLAST+ (makeblastdb and blastp)
+# Creating BLAST database for original proteins
+makeblastdb -in original_protein.fasta -dbtype prot -out original_db
+# Running BLASTp to compare outgroup proteins to original proteins
+blastp -query outgroup_protein.fasta -db original_db -outfmt 6 -out blast_results.tsv -evalue 1e-5
+
+# Filtering BLAST results by similarity threshold (e.g., retaining hits with >= 80% identity)
+awk '$3 >= 80' blast_results.tsv > filtered_orthologues.tsv
+
+# Step 4: Extract CDS of orthologous regions for each gene group
+# Tool: BEDTools and seqtk
+# Extracting CDS regions based on filtered orthologues and dividing by gene groups
+mkdir gene_groups
+cut -f 1 filtered_orthologues.tsv | sort | uniq > gene_ids.txt
+
+# Assuming you have predefined gene groups as group1.txt, group2.txt, etc.
+for group in group1 group2 group3; do
+    mkdir gene_groups/$group
+    grep -Ff ${group}.txt gene_ids.txt > gene_groups/${group}/${group}_orthologues.txt
+    while read gene_id; do
+        grep -A 1 "$gene_id" original_cds.fasta >> gene_groups/${group}/filtered_original_cds.fasta
+        grep -A 1 "$gene_id" outgroup_cds.fasta >> gene_groups/${group}/filtered_outgroup_cds.fasta
+    done < gene_groups/${group}/${group}_orthologues.txt
+
+    # Step 5: Align CDS sequences with MAFFT for each group
+    mafft --auto gene_groups/${group}/filtered_original_cds.fasta > gene_groups/${group}/aligned_original_cds.fasta
+    mafft --auto gene_groups/${group}/filtered_outgroup_cds.fasta > gene_groups/${group}/aligned_outgroup_cds.fasta
+
+    # Step 6: Ka/Ks analysis in R for each group
+    Rscript -e "
+    library(seqinr)
+    # Load aligned sequences
+    original_aln <- read.alignment('gene_groups/${group}/aligned_original_cds.fasta', format = 'fasta')
+    outgroup_aln <- read.alignment('gene_groups/${group}/aligned_outgroup_cds.fasta', format = 'fasta')
+    # Perform Ka/Ks analysis
+    kaks_result <- kaks(original_aln, outgroup_aln)
+    print(kaks_result)
+    "
+done
