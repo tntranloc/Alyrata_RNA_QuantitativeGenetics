@@ -78,16 +78,20 @@ seq 1 20 | parallel -j 4 "QTLtools cis --vcf genotypes.vcf.gz --bed myPhenotypes
 
 
 ######### trans eQTL #########
+##### Full pass has 2 steps
 
 ## Nominal pass
-QTLtools trans --vcf genotypes.vcf.gz --bed myPhenotypes.bed.gz --nominal --cov covariates.txt.gz --threshold 1e-5 --window 5000 --normal --out output_prefix.txt
+QTLtools trans --vcf genotypes.vcf.gz --bed myPhenotypes.bed.gz --nominal --threshold 1e-5 --window 5000 --normal --out output_prefix.txt
 
 ## Permutation pass
-seq 1 20 | parallel -j 4 "QTLtools trans --vcf genotypes.vcf.gz --bed myPhenotypes.bed.gz --cov covariates.txt.gz --permute  --normal --window 5000  --out output_prefix_{}.txt --seed {}"
+seq 1 20 | parallel -j 4 "QTLtools trans --vcf genotypes.vcf.gz --bed myPhenotypes.bed.gz --permute  --normal --window 5000  --out output_prefix_{}.txt --seed {}"
 
 
-
-
+##### Approx pass has 2 steps
+## build the null distribution 
+QTLtools trans --vcf genotypes.vcf.gz --bed myPhenotypes.bed.gz --sample 1000 --normal --out trans.sample
+## run approx pass
+QTLtools trans --vcf genotypes.vcf.gz --bed myPhenotypes.bed.gz --adjust trans.sample.best.txt.gz --normal --threshold 0.1 --out trans.adjust
 
 
 
