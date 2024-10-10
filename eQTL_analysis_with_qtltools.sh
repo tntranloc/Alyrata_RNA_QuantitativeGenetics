@@ -1,3 +1,8 @@
+#### REQUIRED ######
+# QTLtools in Bash
+# in R: qvalue, ggplot2
+# custom scripts from https://github.com/qtltools/qtltools/tree/master/scripts
+
 ## check the manual yourself for general or post- processing https://qtltools.github.io/qtltools/
 ## my note mostly show steps that are not explicit or not shown in the qtltools manual
 
@@ -67,7 +72,8 @@ cat permutations_*_20.txt | gzip -c > permutations_full.txt.gz
 
 ### get permutation threshold for the next analysis 
 Rscript ./script/runFDR_cis.R permutations_all.txt.gz 0.05 permutations_all
-
+  # this custom script is founded at https://github.com/qtltools/qtltools/tree/master/scripts
+  # in case not found, scroll to the end of this snippet to find the script copy
 
 ######## cis eQTL conditional method #########
 QTLtools cis --vcf genotypes.vcf.gz --bed myPhenotypes.bed.gz --cov covariates.txt.gz --mapping permutations_all.thresholds.txt --chunk 12 16 --out conditional_12_16.txt
@@ -94,8 +100,245 @@ QTLtools trans --vcf genotypes.vcf.gz --bed myPhenotypes.bed.gz --sample 1000 --
 QTLtools trans --vcf genotypes.vcf.gz --bed myPhenotypes.bed.gz --adjust trans.sample.best.txt.gz --normal --threshold 0.1 --out trans.adjust
 
 
+################ Start analysis in R ######################
 
-############ PLOT classic eQTL position #########
+######################## CIS ###########################
+#load data
+d= read.table("cis_permutation_all.txt.gz", header=F, stringsAsFactors=F)
+e = read.table("cis_conditional_all.txt.gz", header=F, stringsAsFactors=F)
+plot(d$V19, d$V20, xlab="Direct method", ylab="Beta approximation", main="")
+abline(0, 1, col="red") ## this should be linear!
+
+## signif SNPs corrected by FDR
+library(qvalue)
+d=d[!is.na(d$V20),]
+d$qval=qvalue(d$V20)$qvalue
+d1 = d[which(d$qval <= 0.05), ]
+write.table(d1, "cis_permutation_all_signif_fdr.txt", quote=FALSE, row.names=FALSE, col.names=FALSE) 
+
+## filter top variants in conditional result
+## one needs a df of exon id and corresponding gene ID
+topvar = e %>% filter(V21 == "1")
+# extract information # assuming one has a df of all necessary info, usually from gff annotation file
+exondf2 = data.frame(exondf$exonid, exondf$geneID)
+colnames(topvar)[c(1,2)] = c("exonid", "chr")
+colnames(exondf2) = c("exonid", "geneID")
+
+topvar = left_join(topvar, exondf2, by = "exonid")
+
+# top variant is ranked 0
+topvar_rank0 = topvar %>% filter(V12 == "0")
+# get variant ID and variant chromosome ID 
+  # varid is chromosome-startposition 
+topvar_rank0$varid = paste(topvar_rank0$V9 , topvar_rank0$V10, sep = "-")
+  # varid2 is chromosome-startposition-endposition
+topvar_rank0$varid2 = paste(topvar_rank0$varid, topvar_rank0$V10, sep = "-")
+
+# extract snps that are associated with more than one gene
+# save it for any further downstream analysis
+t1 = topvar_rank0[duplicated(topvar_rank0$varid)|duplicated(topvar_rank0$varid, fromLast=TRUE),]
+t2 = topvar_rank0[duplicated(topvar_rank0$varid2)|duplicated(topvar_rank0$varid2, fromLast=TRUE),]
+write.csv(t2, "cis_conditional_snps_assoc_with_multiple_genes.csv", row.names = F)
+write.table(topvar, "cis_conditional_alltops.txt", quote=FALSE, row.names=FALSE, col.names=FALSE)
+write.table(topvar_rank0, "cis_conditional_toprank0.txt", quote=FALSE, row.names=FALSE, col.names=FALSE)
 
 
+################## TRANS ######################
+#### trans full pass #####
+f= read.table("trans.txt", header=F, stringsAsFactors=F)
+summary(f)
+f_signif = f %>% filter(V10 <= 0.05)
+write.table(f_signif, "trans_signif_fdr.txt", quote=FALSE, row.names=FALSE, col.names=FALSE)
+
+
+##### trans approx pass - personal preference #########
+B = read.table("trans.adjust.best.txt.gz", head=FALSE, stringsAsFactors=FALSE)
+H = read.table("trans.adjust.hits.txt.gz", head=FALSE, stringsAsFactors=FALSE)
+FDR = 0.05
+B$qval = qvalue(B$V2)$qval
+threshold = min(B$V2[which(B$qval > FDR)])
+cat("  * Threshold of significance for adjusted P-values =" , threshold, "\n")
+#Threshold of significance for adjusted P-values = ... 
+cat("\nFiltering hits and output results\n");
+S = H[which(H$V8 <= threshold), ]
+  # or if one would prefer Bonferroni
+  # S = H[which(H$V8 <= (0.05/nrow(H))), ] 
+cat("  * " , nrow(S) , " are significante out of ", nrow(H), "\n")
+#...  are significante out of  ... 
+write.table(S, "trans_signiffdr.txt", quote=FALSE, row.names=FALSE, col.names=FALSE)
+
+
+###### Classic plotting for eQTL position ######
+# extract relevant columns
+  # chr and start position of genes and associated snps respectively
+    # !!be careful so as not to swap gene and snp around at this step!!
+cis = topvar_rank0[,c(2,3,9,10)]
+cis$color_attribute = "cis" # for plotting later
+
+# similarly for trans
+trans_a = S[,c(2,3,5,6)]
+trans_a$color_attribute = "trans" # for plotting later
+
+# merging cis and trans df
+colnames(cis) = c("chr_x", "position_x", "chr_y", "position_y", "color_attribute")
+colnames(trans) = c("chr_x", "position_x", "chr_y", "position_y", "color_attribute")
+cis_trans = rbind(cis, trans_a)
+
+# prepare for plotting
+cis_trans$chr_x = as.factor(cis_trans_a$chr_x)
+cis_trans$chr_y = as.factor(cis_trans_a$chr_y)
+cis_trans$chr_x = factor(cis_trans_a$chr_x, levels = c("scaffold_1", "scaffold_2", "scaffold_3", "scaffold_4", "scaffold_5", "scaffold_6", "scaffold_7", "scaffold_8"))
+cis_trans$chr_y = factor(cis_trans_a$chr_y, levels = rev(c("scaffold_1", "scaffold_2", "scaffold_3", "scaffold_4", "scaffold_5", "scaffold_6", "scaffold_7", "scaffold_8")))
+
+
+# finally, plot them
+# again be careful here as it can be confusing
+  # position y is genomic position of associated SNP --> plot on x axis, like a GWAS
+  # position x is phenotype, i.e. position of genes --> plot on y axis
+
+ggplot(cis_trans, aes(x = position_y, y = position_x, color = color_attribute)) +
+  geom_point(alpha = 0.6, size = 0.6) +
+  facet_grid(chr_y ~ chr_x, switch = "both") +
+  scale_color_manual(values = c("chocolate3", "cornflowerblue")) +
+  theme_minimal() +
+  labs(
+    title = "Cis-trans plot",
+    x = "Genomic pos",
+    y = "Pheno"
+  ) +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    strip.background = element_blank(),
+    strip.text = element_text(face = "bold")
+  )
+
+
+
+################################ Custom scripts from QTLtools #########################
+
+######## runFDR_cis.R #######
+## start of script 
+
+#!/usr/bin/env Rscript
+#Load qvalue package
+suppressMessages(library(qvalue))
+
+#Read command line arguments
+args <- commandArgs(trailingOnly = TRUE)
+if(length(args) != 3)  stop("Incorrect number of arguments\n usage\t qtltools_runFDR_cis.R INPUT FDR OUTPUT")
+opt_input  <- args[1]
+opt_fdr    <- as.numeric(args[2])
+opt_output <- args[3]
+opt_col    <- 20
+opt_dof1   <- 12
+opt_dof2   <- 13
+opt_bml1   <- 14
+opt_bml2   <- 15
+temp <- read.table(opt_input,nrows = 1)
+header <- FALSE
+if (temp$V1 == "phe_id" || temp$V1 == "grp_id"){
+  header  <- TRUE
+  opt_col <- which(temp == "adj_beta_pval")
+  if(length(opt_col) != 1)  stop("Header present but cannot find column adj_beta_pval")
+  opt_dof1 <- which(temp == "dof1")
+  if(length(opt_dof1) != 1)  stop("Header present but cannot find column dof1")
+  opt_dof2 <- which(temp == "dof2")
+  if(length(opt_dof2) != 1)  stop("Header present but cannot find column dof2")
+  opt_bml1 <- which(temp == "bml1")
+  if(length(opt_bml1) != 1)  stop("Header present but cannot find column bml1")
+  opt_bml2 <- which(temp == "bml2")
+  if(length(opt_bml2) != 1)  stop("Header present but cannot find column bml2")
+}
+
+#Verbose
+cat("\nProcessing QTLtools output\n");
+cat("  * Input  = [", opt_input, "]\n");
+cat("  * FDR    = ", opt_fdr, "\n");
+cat("  * Output = [", opt_output, "]\n");
+
+#Read data
+cat("\nRead Input data\n");
+D = read.table(opt_input,hea=header, stringsAsFactors=FALSE)
+if (!header){
+  if(ncol(D) == 21){
+    opt_col <- 21
+    if (!all(D[,16] >= 0 & D[,16] <= 1,na.rm = T)){
+      cat("Assuming --grp-mean\n")
+      opt_dof1 <- 13
+      opt_dof2 <- 14
+      opt_bml1 <- 15
+      opt_bml2 <- 16
+    }else{
+      cat("Assuming --std-err\n")
+    }
+  }else if (ncol(D) == 22){
+    opt_col <- 22
+    if(!all(D[,17] >= 0 & D[,17] <= 1,na.rm = T)){
+      cat("Assuming --grp-{pca,best}\n")
+      opt_dof1 <- 14
+      opt_dof2 <- 15
+      opt_bml1 <- 16
+      opt_bml2 <- 17
+    }else{
+      cat("Assuming --grp-mean and --std-err\n")
+      opt_dof1 <- 13
+      opt_dof2 <- 14
+      opt_bml1 <- 15
+      opt_bml2 <- 16
+    }
+  }else if (ncol(temp) == 23){
+    cat("Assuming --grp-{pca,best} and --std-err\n")
+    opt_col    <- 23
+    opt_dof1   <- 14
+    opt_dof2   <- 15
+    opt_bml1   <- 16
+    opt_bml2   <- 17
+  }else if (ncol(temp) != 20){
+    stop("Unknown file type")
+  }
+}
+
+cat("  * Selected columns for dof1 dof2 bml1 bml2 adj_beta_pval\n")
+print(head(D[c(opt_dof1,opt_dof2,opt_bml1,opt_bml2,opt_col)]))
+
+cat("  * Number of molecular phenotypes =" , nrow(D), "\n")
+cat("  * Number of NA lines =" , sum(is.na(D[,opt_col - 1])), "\n")
+cat("  * Correlation between Beta approx. and Empirical p-values =", round(cor(D[, opt_col-1], D[, opt_col],use = "pairwise.complete.obs"), 6), "\n")
+
+#Run qvalue on pvalues for best signals
+cat("\nProcess Input data with Qvalue\n")
+Q <- qvalue(D[,opt_col])
+D$qval <- Q$qvalues
+cat("  * Proportion of significant phenotypes =" , round((1 - Q$pi0) * 100, 2), "%\n")
+
+#Determine significance threshold
+cat("\nDetermine significance thresholds\n");
+set0 = D[which(D$qval <= opt_fdr),]
+set1 = D[which(D$qval > opt_fdr),]
+pthreshold = (sort(set1[,opt_col])[1] - sort(-1.0 * set0[,opt_col])[1]) / 2
+cat("  * Corrected p-value threshold = ", pthreshold, "\n")
+pval0 = qbeta(pthreshold, D[,opt_bml1], D[,opt_bml2], ncp = 0, lower.tail = TRUE, log.p = FALSE)
+test0 = qf(pval0, 1, D[,opt_dof2], ncp = 0, lower.tail = FALSE, log.p = FALSE)
+corr0 = sqrt(test0 / (D[,opt_dof2] + test0))
+test1 = D[,opt_dof1] * corr0 * corr0 / (1 - corr0 * corr0)
+pval1 = pf(test1, 1, D[,opt_dof1], ncp = 0, lower.tail = FALSE, log.p = FALSE)
+cat("  * pval0 = ", mean(pval0,na.rm = T), " +/- ", sd(pval0,na.rm = T), "\n")
+cat("  * test0 = ", mean(test0,na.rm = T), " +/- ", sd(test0,na.rm = T), "\n")
+cat("  * corr0 = ", mean(corr0,na.rm = T), " +/- ", sd(corr0,na.rm = T), "\n")
+cat("  * test1 = ", mean(test1,na.rm = T), " +/- ", sd(test1,na.rm = T), "\n")
+cat("  * pval1 = ", mean(pval1,na.rm = T), " +/- ", sd(pval1,na.rm = T), "\n")
+D$nthresholds = pval1
+
+#Write significant hits
+fout1=paste(opt_output, "significant.txt", sep=".")
+cat("\nWrite significant hits in [", fout1, "]\n");
+write.table(D[which(D$qval <= opt_fdr),], fout1, quote=FALSE, row.names=FALSE, col.names=FALSE)
+
+#Write thresholds
+fout2=paste(opt_output, "thresholds.txt", sep=".")
+cat("\nWrite nominal thresholds in [", fout2, "]\n");
+write.table(D[,c(1,ncol(D))], fout2, quote=FALSE, row.names=FALSE, col.names=FALSE)
+
+#end of script
 
