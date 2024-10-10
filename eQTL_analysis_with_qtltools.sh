@@ -176,13 +176,13 @@ cis = topvar_rank0[,c(2,3,9,10)]
 cis$color_attribute = "cis" # for plotting later
 
 # similarly for trans
-trans_a = S[,c(2,3,5,6)]
-trans_a$color_attribute = "trans" # for plotting later
+trans = S[,c(2,3,5,6)]
+trans$color_attribute = "trans" # for plotting later
 
 # merging cis and trans df
 colnames(cis) = c("chr_x", "position_x", "chr_y", "position_y", "color_attribute")
 colnames(trans) = c("chr_x", "position_x", "chr_y", "position_y", "color_attribute")
-cis_trans = rbind(cis, trans_a)
+cis_trans = rbind(cis, trans)
 
 # prepare for plotting
 cis_trans$chr_x = as.factor(cis_trans_a$chr_x)
@@ -197,14 +197,14 @@ cis_trans$chr_y = factor(cis_trans_a$chr_y, levels = rev(c("scaffold_1", "scaffo
   # position x is phenotype, i.e. position of genes --> plot on y axis
 
 ggplot(cis_trans, aes(x = position_y, y = position_x, color = color_attribute)) +
-  geom_point(alpha = 0.6, size = 0.6) +
+  geom_point(alpha = 0.4, size = 0.6) +
   facet_grid(chr_y ~ chr_x, switch = "both") +
-  scale_color_manual(values = c("chocolate3", "cornflowerblue")) +
+  scale_color_manual(values = c("chocolate1", "cornflowerblue")) +
   theme_minimal() +
   labs(
     title = "Cis-trans plot",
-    x = "Genomic pos",
-    y = "Pheno"
+    x = "Associated SNP position",
+    y = "Gene position"
   ) +
   theme(
     panel.grid.major = element_blank(),
