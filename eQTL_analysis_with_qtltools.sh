@@ -89,7 +89,7 @@ seq 1 20 | parallel -j 4 "QTLtools cis --vcf genotypes.vcf.gz --bed myPhenotypes
 ## Nominal pass
 QTLtools trans --vcf genotypes.vcf.gz --bed myPhenotypes.bed.gz --nominal --threshold 1e-5 --window 5000 --normal --out output_prefix.txt
 
-## Permutation pass
+## Permutation pass ## no parallel needed but if desired:
 seq 1 20 | parallel -j 4 "QTLtools trans --vcf genotypes.vcf.gz --bed myPhenotypes.bed.gz --permute  --normal --window 5000  --out output_prefix_{}.txt --seed {}"
 
 # get the FDR correction
@@ -100,7 +100,7 @@ Rscript ~/script/runFDR_ftrans.R trans.nominal.hits.txt.gz trans.perm123.hits.tx
 ## build the null distribution 
 QTLtools trans --vcf genotypes.vcf.gz --bed myPhenotypes.bed.gz --sample 1000 --normal --out trans.sample
 ## run approx pass
-QTLtools trans --vcf genotypes.vcf.gz --bed myPhenotypes.bed.gz --adjust trans.sample.best.txt.gz --normal --threshold 0.1 --out trans.adjust
+QTLtools trans --vcf genotypes.vcf.gz --bed myPhenotypes.bed.gz --adjust trans.sample.best.txt.gz --window 5000 --normal --threshold 0.1 --out trans.adjust
 
 
 ################ Start analysis in R ######################
