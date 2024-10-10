@@ -12,6 +12,8 @@ Main scripts
 - plantCV_computervision_...md is a Python workflow to analyse plant images in a higher throughput way
 - KaKs_calculation:
 - snpeff.sh
+- enrichment_and_clustering.R
+- randomForest_for_geneticArchitecture.R
 
 Supporting scripts:
 - plot_quantGene_concept_model.md shows how to visualise allele substitution effect and genetic variance components in different scenarios of dominance, additive, underdominance, overdominance, etc
