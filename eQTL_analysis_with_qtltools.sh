@@ -92,6 +92,9 @@ QTLtools trans --vcf genotypes.vcf.gz --bed myPhenotypes.bed.gz --nominal --thre
 ## Permutation pass
 seq 1 20 | parallel -j 4 "QTLtools trans --vcf genotypes.vcf.gz --bed myPhenotypes.bed.gz --permute  --normal --window 5000  --out output_prefix_{}.txt --seed {}"
 
+# get the FDR correction
+Rscript ~/script/runFDR_ftrans.R trans.nominal.hits.txt.gz trans.perm123.hits.txt.gz output.txt 
+  # if script is not found in the author's github, scroll to the end of this snippet for a script copy
 
 ##### Approx pass has 2 steps
 ## build the null distribution 
@@ -218,6 +221,7 @@ ggplot(cis_trans, aes(x = position_y, y = position_x, color = color_attribute)) 
 ################################ Custom scripts from QTLtools #########################
 
 ######## runFDR_cis.R #######
+
 ## start of script 
 
 #!/usr/bin/env Rscript
@@ -340,5 +344,37 @@ fout2=paste(opt_output, "thresholds.txt", sep=".")
 cat("\nWrite nominal thresholds in [", fout2, "]\n");
 write.table(D[,c(1,ncol(D))], fout2, quote=FALSE, row.names=FALSE, col.names=FALSE)
 
-#end of script
+##end of script##
+
+
+###### runFDR_ftrans.R #########
+## start of script ## 
+#!/usr/bin/env Rscript
+#Read command line arguments
+args <- commandArgs(trailingOnly = TRUE)
+try(if(length(args) != 3) stop("Incorrect number of arguments, usage> Rscript runFDR_ftrans.R nominal.hits.txt.gz permutation.hits.txt.gz output.txt"))
+
+cat("\nProcessing QTLtools full trans output\n");
+cat("  * File hits nominal = [", args[1], "]\n");
+cat("  * File hits permute = [", args[2], "]\n");
+cat("  * Output            = [", args[3], "]\n");
+
+#Read data
+Nh=read.table(args[1], head=FALSE, stringsAsFactors=FALSE)
+Ph=read.table(args[2], head=FALSE, stringsAsFactors=FALSE)
+
+#Sort best hits
+Nh=Nh[order(Nh$V7), ]
+Ph=Ph[order(Ph$V7), ]
+
+#Estimate FDR
+Nh$fdr=1.0
+for (h in 1:nrow(Nh)) {
+	Nh$fdr[h] = sum(Ph$V7 <= Nh$V7[h]) / h
+}
+
+#OUTPUT
+write.table(Nh, args[3], quote=FALSE, row.names=FALSE, col.names=FALSE)
+
+##end of script ##
 
