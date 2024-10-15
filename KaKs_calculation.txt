@@ -72,4 +72,12 @@ for group in group1 group2 group3; do
     kaks_result <- kaks(original_aln, outgroup_aln)
     print(kaks_result)
     "
+
+    ## or without R
+   # Step 6: Ka/Ks analysis using KaKs_Calculator
+    # Tool: KaKs_Calculator
+    # Convert aligned CDS to axt format and run KaKs_Calculator
+    paste gene_groups/${group}/aligned_original_cds.fasta gene_groups/${group}/aligned_outgroup_cds.fasta > gene_groups/${group}/aligned_${group}.axt
+    KaKs_Calculator -i gene_groups/${group}/aligned_${group}.axt -o gene_groups/${group}/kaks_results.txt
+
 done
