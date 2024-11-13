@@ -100,6 +100,16 @@ bcftools view -i 'F_MISSING < 0.1 && FORMAT/DP > 10 && FORMAT/DP < 100 && MAF >=
 ## To have statistics of the vcf file
 bcftools stats input.vcf.gz > stats.txt
 
+## To extract INFO DP for filtering
+bcftools query -f '%CHROM\t%POS\t%INFO/DP\n' input.vcf.gz > info_dp_values.txt
+# the in R:
+info_dp = read.table("info_dp_values.txt", header = F, sep = "\t") # column 3 is DP value
+ggplot(info_dp, aes(x = V3)) +
+  geom_histogram(binwidth = 10, fill = "skyblue", color = "black") +
+  labs(title = "Histogram of INFO DP (Limited x-axis)", x = "INFO DP", y = "Frequency") +
+  xlim(0, 1000) +
+  theme_minimal()
+
 ### BONUS ###
 ## To rename samples in vcf file
 bcftools reheader -s ${INPUTDIR}/new_sample_names.txt -o ${OUTDIR}/$OUTPUT $INPUT 
