@@ -27,8 +27,8 @@ transcriptome_data_clean = transcriptome_data %>%
 
 
 # Step 2: Define Geneset
-
-genes = read.csv("/Users/nhutran/Documents/PhD/epidom/runs/genomicfactors_forRF/norm_counts_df_310_samples_intra_19k.csv", header = T)
+# Transcript count df
+genes = read.csv("norm_counts_df_310_samples_intra_19k.csv", header = T)
 rownames(genes) = genes$X
 genes= genes[,-1]
 #genes[1:10,1:10]
