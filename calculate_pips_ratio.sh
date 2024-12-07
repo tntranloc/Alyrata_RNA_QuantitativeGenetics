@@ -22,3 +22,6 @@ bedtools intersect -a genes.bed -b snp_pi_values.bed -wa -wb > snps_in_genes.bed
 #chr1    50      150     Gene1   chr1    100    101    0.0012
 #chr1    180     350     Gene2   chr1    200    201    0.0008
 #chr1    180     350     Gene2   chr1    300    301    0.0015
+
+
+### DONE, good luck! ####
