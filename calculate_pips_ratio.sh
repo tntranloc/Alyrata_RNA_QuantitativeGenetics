@@ -1,31 +1,24 @@
-#!/bin/bash
+## Required: vcftools and bedtools 
+## Input vcf file, bed file of location of genes of interest
 
-# Define input and output file
-input_file="variants_table.tsv"
-output_file="pi_ratio_output.tsv"
+# Bed file structure, must follow!
+# chr, start, end, strand, gene id
+#chr1    50      150     + Gene1
+#chr1    180     350    - Gene2
+#chr1    400     600    + Gene3
 
-# Print header to output file
-echo -e "Gene\tGeneId\tTranscriptId\tπi\tπs\tπi/πs" > $output_file
+### First calculate pi for every SNP position
+vcftools --vcf input.vcf --site-pi --out snp_pi_values
 
-# Skip the first line (header) and process each row
-tail -n +2 $input_file | while IFS=$'\t' read -r gene gene_id transcript_id biotype high low moderate modifier \
-        utr3 premature_start utr5 downstream initiator intron missense noncoding splice_acceptor \
-        splice_donor splice_region start_lost stop_gained stop_lost stop_retained synonymous upstream; do
+### Add "end" column to file
+awk 'NR>1 {print $1"\t"$2"\t"($2+1)"\t"$3}' snp_pi_values.sites.pi > snp_pi_values.bed
+# If this doesn't work, put end position the same as start position
+awk 'NR>1 {print $1"\t"$2"\t"($2)"\t"$3}' snp_pi_values.sites.pi > snp_pi_values.bed
 
-    # Extract πi (missense variants) and πs (synonymous variants)
-    pi_i=$missense
-    pi_s=$synonymous
+### Then simply intersect the genes of interest and SNP positions
+bedtools intersect -a genes.bed -b snp_pi_values.bed -wa -wb > snps_in_genes.bed
 
-    # Calculate πi/πs, handle division by zero
-    if [ "$pi_s" -ne 0 ]; then
-        pi_ratio=$(echo "scale=4; $pi_i / $pi_s" | bc)
-    else
-        pi_ratio="undefined"
-    fi
-
-    # Append results to the output file
-    echo -e "$gene\t$gene_id\t$transcript_id\t$pi_i\t$pi_s\t$pi_ratio" >> $output_file
-done
-
-# Inform the user
-echo "Calculation complete! Results saved in $output_file"
+# output should look like
+#chr1    50      150     Gene1   chr1    100    101    0.0012
+#chr1    180     350     Gene2   chr1    200    201    0.0008
+#chr1    180     350     Gene2   chr1    300    301    0.0015
