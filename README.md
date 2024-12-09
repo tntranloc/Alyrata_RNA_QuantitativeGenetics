@@ -10,10 +10,11 @@ Main scripts
 - genetic_variance_analysis_brms.R is an Rscript to run Animal Model on large scale data such as gene count matrix on cluster
 - eQTL_analysis_with_qtltools.sh shows how to perform expression QTL analysis with qtltools
 - plantCV_computervision_...md is a Python workflow to analyse plant images in a higher throughput way
-- KaKs_calculation:
-- snpeff.sh
-- enrichment_and_clustering.R
-- randomForest_for_geneticArchitecture.R
+- calculate pips_ratio.sh: calculate nucleotide diversity in a population using variant calling input
+- snpeff.sh: using snpeff to extract synonymous and non.synonymous variants using variant calling input
+- enrichment_and_clustering.R: functional enrichment analysis and hierachial clustering
+- randomForest_for_geneticArchitecture.R: random forest analysis
+
 
 Supporting scripts:
 - plot_quantGene_concept_model.md shows how to visualise allele substitution effect and genetic variance components in different scenarios of dominance, additive, underdominance, overdominance, etc
