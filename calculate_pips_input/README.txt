@@ -1,1 +1,1 @@
-Input for calculate_pips script
+Input for calculate_pips_ratio.sh script
