@@ -14,6 +14,7 @@ Main scripts
 - snpeff.sh: using snpeff to extract synonymous and non.synonymous variants using variant calling input
 - enrichment_and_clustering.R: functional enrichment analysis and hierachial clustering
 - randomForest_for_geneticArchitecture.R: random forest analysis
+- transcriptome_wide_association_study_withGEMMA.sh: running TWAS using simple workflow with GEMMA
 
 
 Supporting scripts:
