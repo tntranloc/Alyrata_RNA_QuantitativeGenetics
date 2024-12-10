@@ -1,3 +1,4 @@
+#### METHOD 1 #####
 ## Required: vcftools and bedtools 
 ## Input vcf file, bed file of location of genes of interest
 
@@ -23,5 +24,27 @@ bedtools intersect -a genes.bed -b snp_pi_values.bed -wa -wb > snps_in_genes.bed
 #chr1    180     350     Gene2   chr1    200    201    0.0008
 #chr1    180     350     Gene2   chr1    300    301    0.0015
 
+
+
+#### METHOD 2 #####
+## Required: Python 3.8 and pixy 
+
+## Installation
+conda create --name pixy_env python=3.8
+conda activate pixy_env
+conda install -c conda-forge pixy
+conda install -c bioconda htslib
+
+# run simply by
+pixy --stats pi fst dxy \
+--vcf input.vcf.gz \
+--populations popinfo.txt \
+--bed_file genes.bed
+
+
+  ## simply put in pop info 2 columns, sample name and population name
+  ## if there is only one population, put one, no problem here
+
+# output headers are	chromosome	window_pos_1	window_pos_2	avg_pi	no_sites	count_diffs	count_comparisons	count_missing
 
 ### DONE, good luck! ####
