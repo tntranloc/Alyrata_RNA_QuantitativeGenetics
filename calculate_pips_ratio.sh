@@ -27,15 +27,26 @@ bedtools intersect -a genes.bed -b snp_pi_values.bed -wa -wb > snps_in_genes.bed
 
 
 #### METHOD 2 #####
-## Required: Python 3.8 and pixy 
+## Required: Python 3.8, conda, and pixy 
 
 ## Installation
-conda create --name pixy_env python=3.8
-conda activate pixy_env
-conda install -c conda-forge pixy
-conda install -c bioconda htslib
+# Set up environment
+mkdir ~/pixy_env
+cd ~/pixy_env
 
-# run simply by
+# Create a virtual environment
+python3 -m venv pixy_venv
+
+# Activate the virtual environment
+source pixy_venv/bin/activate
+
+pip install pixy
+pixy --version 
+
+# Activate it anew by 
+source ~/pixy_env/pixy_venv/bin/activate
+
+# Then run simply by
 pixy --stats pi fst dxy \
 --vcf input.vcf.gz \
 --populations popinfo.txt \
