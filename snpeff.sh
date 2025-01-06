@@ -11,8 +11,8 @@ java -jar snpEff.jar download <reference-genome>
 java -jar snpEff.jar -v <reference-genome> input.vcf > annotated.vcf
 
 # filter 
-grep "synonymous_variant" annotated.vcf > synonymous.txt
-grep "missense_variant" annotated.vcf > nonsynonymous.txt
+bcftools view -i 'INFO/ANN[*] ~ "synonymous_variant"' annotated.vcf > synonymous_variants.vcf
+bcftools view -i 'INFO/ANN[*] ~ "missense_variant"' annotated.vcf > nonsynonymous_variants.vcf
 
 ### Optional: build your own reference database ###
 
