@@ -1,0 +1,147 @@
+
+######################################## PART 1: in Bash ########################################
+#################################################################################################
+
+## Required input
+# VCF unfiltered, contains all sites including variants, non-variants, and even missing data
+# annotation file (gtf or gff format)
+# reference genome fasta file
+# list of different gene groups of interest
+# population information
+
+## Required Tools
+
+# For pi calculation: Python 3, conda, and pixy (https://pixy.readthedocs.io)
+# For annotating degeneracy: Python 3, degenotate (https://github.com/harvardinformatics/degenotate)
+# In general: BCFTools, VCFTools, HTSlib, SAMtools
+
+########## Calculate pi using pixy ##########
+
+pixy --stats pi fst dxy \
+--vcf input.vcf.gz \ 
+--populations popinfo.txt \
+--window_size 1 # to calculate pi for every single position
+--output_folder /path/to/output/directory
+
+# popinfo.txt has two columns sample name (as in VCF) and population name
+  # f.e. Sample1 popA
+  #      Sample2 popA
+  #      Sample3 popB
+
+# Since this takes quite some time, recommended to do it per chromosome and concantenate them
+
+## Output should have, among other things,
+  # chromosome   # position 1   # position 2    # pi value
+
+
+########## Annotate degeneracy using degenotate ##########
+python degenotate.py -a reference_genome_annotation.gtf -g reference_genome.fasta -o /path/to/output/directory
+## Output should have, among other things
+  # chromosome  # position 1  # position 2  # geneID  # degeneracy_code (either 0,1,2,3,or 4)
+
+# For the information, the headers in order are, we need only column 1 - 5 
+# chromosome      window_pos_1    window_pos_2    geneID  degeneracy      ref_nucleotide  ref_aminoacid   mutation_summary
+
+
+########## Combine degeneracy and pi into one table ##########
+
+PI=/path/to/pixy_pi_all_chromosomes.bed
+DEG=/path/to/degeneracy-all-sites.bed
+
+bedtools intersect -a $PI -b $DEG -wa -wb > pi_degeneracy_table.bed
+
+# This final combined file has 
+# chromosome_.. position1 position2 pi chromosome_... position1 position2 geneID degeneneracy_code
+
+
+## Divide them into 0 fold and 4 fold
+
+awk -F'\t' '$9 == 0' input.bed > output_0fold.bed
+awk -F'\t' '$9 == 4' input.bed > output_4fold.bed
+
+# Calculate mean pi PER GENE (using all positions of a gene)
+awk -F'\t' '{sum[$8] += $4; count[$8]++} END {for (gene in sum) print gene, sum[gene] / count[gene]}' OFS='\t' input_file > mean_pi_per_gene.txt
+
+
+
+
+######################################## PART 2: in R ########################################
+##############################################################################################
+
+
+
+#############################################################################################
+###################################### NOTES and TIPS #######################################
+ 
+### NOTES on installing degenotate
+git clone https://github.com/harvardinformatics/degenotate.git
+
+### NOTES on installing pixy
+## Installation
+# Set up environment
+mkdir ~/pixy_env
+cd ~/pixy_env
+
+# Create a virtual environment
+python3 -m venv pixy_venv
+
+# Activate the virtual environment
+source pixy_venv/bin/activate
+
+pip install pixy
+pixy --version 
+
+# Activate it anew by 
+source ~/pixy_env/pixy_venv/bin/activate
+
+# Then run simply by
+pixy --stats pi fst dxy \
+--vcf input.vcf.gz \
+--populations popinfo.txt \
+--bed_file genes.bed
+
+
+####### To generate scripts for all chromosomes at once ######
+
+
+#!/bin/bash
+
+# Directory to store the generated scripts
+OUTPUT_DIR="./chromosome_scripts"
+mkdir -p $OUTPUT_DIR
+
+# Chromosome list for example
+CHROMOSOMES=("scaffold_1" "scaffold_2" "scaffold_3" "scaffold_4" "scaffold_5" "scaffold_6" "scaffold_7" "scaffold_8")
+
+# Base VCF file
+VCF="/path/to/input.vcf.gz"
+
+# Loop through each chromosome and create a script
+for CHR in "${CHROMOSOMES[@]}"; do
+    SCRIPT_NAME="$OUTPUT_DIR/run_pixy_${CHR}.sh"
+
+    cat <<EOL > $SCRIPT_NAME
+#!/bin/bash
+#SBATCH --nodes=1
+#SBATCH --time=400:00:00
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=16gb
+#SBATCH --account=...
+#SBATCH --error=/path/${CHR}_boot.%J.err
+#SBATCH --output=/path/${CHR}_boot.%J.out
+
+cd /path/to/pixy_venv
+source bin/activate 
+
+# Set working directory
+cd ...
+
+# Run pixy for $CHR
+pixy --vcf $VCF --populations populations.txt --chromosomes $CHR --output_folder pixy_${CHR}_results --stats pi --bypass_invariant_check yes --window_size 10
+EOL
+
+    # Make the script executable
+    chmod +x $SCRIPT_NAME
+done
+
+echo "Scripts have been generated in $OUTPUT_DIR"
