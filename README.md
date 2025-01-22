@@ -11,7 +11,7 @@ Main scripts
 - eQTL_analysis_with_qtltools.sh shows how to perform expression QTL analysis with qtltools
 - plantCV_computervision_...md is a Python workflow to analyse plant images in a higher throughput way
 - calculate pips_ratio.sh: calculate nucleotide diversity in a population using variant calling input
-- snpeff.sh: using snpeff to extract synonymous and non.synonymous variants using variant calling input
+- snpeff_annotation_and_how_to_build_own_refgenome_database.sh: using snpeff to extract synonymous and non.synonymous variants using variant calling input, and also building your own reference genome database for snpeff
 - enrichment_and_clustering.R: functional enrichment analysis and hierachial clustering
 - randomForest_for_geneticArchitecture.R: random forest analysis
 - transcriptome_wide_association_study_withGEMMA.sh: running TWAS using simple workflow with GEMMA
