@@ -6,7 +6,7 @@
 # Java 17.0.6
 # picard.jar
 
-#### To be ran on cluster ####
+#### To be run on cluster ####
 ### last updated 12.11.2024 ###
 
 #REF=reference_genome.fasta
