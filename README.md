@@ -6,8 +6,9 @@
 
 Main scripts
 - AnimalModel_collected_scripts.Rmd shows methods to run Animal Model over the past decade, starting with pedigreemm and ending with current brms package
-- complete_RNAseq_workflow_from_fastq_to_counttable.sh shows how to perform RNA-seq analysis from scratch (fastq) to final count table ready for any downstream analysis
+- complete_RNAseq_workflow_from_fastq_to_counttable.sh shows how to perform RNA-seq analysis from fastq to final count table ready for any downstream analysis
 - complete_VariantCalling_workflow_for RNAseq_gatk.sh shows how to call variants using RNAseq data using GATK pipeline
+- complete_pNpS_ratios_for_gene_groups_workflow.txt shows how to calculate pN/pS ratios using variants in parental population(s) using bootstrap with replacement method
 - genetic_variance_analysis_brms.R is an Rscript to run Animal Model on large scale data such as gene count matrix on cluster
 - eQTL_analysis_with_qtltools.sh shows how to perform expression QTL analysis with qtltools
 - plantCV_computervision_...md is a Python workflow to analyse plant images in a higher throughput way
