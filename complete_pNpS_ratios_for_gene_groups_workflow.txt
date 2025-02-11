@@ -105,10 +105,14 @@ four_i = subset(four, four$V1 %in% intermediate$Gene)
 i04 = merge(zero_i, four_i, by = "Gene")
 colnames(i04) = c("Gene","pN","pS")
 
-# Finally random sampling 3000 genes to see if our data differs from random or not
-zero_rand = zero[sample(nrow(zero), 3000),]
-four_rand = four[sample(nrow(four), 3000),]
-ran04 = merge(zero_rand, four_rand, by = "Gene")
+# Finally random sampling 4000 genes to see if our data differs from random or not
+allgenes = rbind(newhighA, newhighD, newhighR, intermediate)
+set.seed(40)
+samplegenes = allgenes[sample(nrow(allgenes), 4000),]
+
+zero_rand = subset(zero, zero$V1 %in% samplegenes)
+four_rand = subset(four, four$V1 %in% samplegenes)
+ran04 = merge(zero_rand, four_rand, by = "V1")
 colnames(ran04) = c("Gene","pN","pS")
 
 # Save these files
