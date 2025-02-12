@@ -198,7 +198,7 @@ bootstrap_ratios_file="piN_pS_ratios_bootstrap1k_allgroups.csv"
 # Save the combined bootstrap ratios table
 write.csv(bootstrap_ratios_table, bootstrap_ratios_file, row.names = FALSE)
 
-# Calculate significance between groups (according to Kim)
+# Calculate significance between groups 
 get_p_bootstrap_0 = function(x, y, data) {
   g1_b = data[data$Group == x & data$Type == "Bootstrap", "Ratio"]
   g2_b = data[data$Group == y & data$Type == "Bootstrap", "Ratio"]
