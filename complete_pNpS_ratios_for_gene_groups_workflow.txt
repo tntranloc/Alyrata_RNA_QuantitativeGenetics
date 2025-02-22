@@ -32,7 +32,8 @@ pixy --stats pi fst dxy \
 
 ## Output should have, among other things,
 # pop  # chromosome   # position 1   # position 2    # pi value
-# column 5 (avg_pi) may have NA, change NA to 0 by awk '{if ($5 == "NA") $5 = 0; print}' input.txt > output.txt
+# column 5 (avg_pi) may have NA, change NA to 0 by 
+  # awk '{if ($5 == "NA") $5 = 0; print}' OFS="\t" pixy_pi.txt > pixy_pi_chr_1.txt
 
 ########## Annotate degeneracy using degenotate ##########
 python degenotate.py -a reference_genome_annotation.gtf -g reference_genome.fasta -o /path/to/output/directory
