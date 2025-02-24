@@ -85,7 +85,14 @@ gatk --java-options "-Xmx4g" GenotypeGVCFs \
     -V combined.g.vcf.gz \
     -O ${OUTDIR}/genotyped.vcf.gz
 
-
+    ## to include ALL sites 
+gatk --java-options "-Xmx4g" GenotypeGVCFs \
+    -R $REF \
+    -all-sites \
+    -V combined.g.vcf.gz \
+    -O ${OUTDIR}/genotyped.vcf.gz
+    --max-alternate-alleles 2
+    
 ### STEP 4: Filter based on the needs ###
 ## To extract SNPs only (f.e. no INDELs)
 gatk --java-options "-Xmx4g" SelectVariants \
