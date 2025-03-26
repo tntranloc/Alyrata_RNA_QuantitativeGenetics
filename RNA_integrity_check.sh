@@ -1,4 +1,5 @@
-## Required: Qualimap v2.3 
+## Required: Qualimap v2.3
+## Optional: MultiQC
 
 ## Usage is very simple
 
@@ -52,5 +53,9 @@ qualimap rnaseq -bam '"$BAM"' -gtf '"$GTF"' -outdir '"$REPORT_DIR/${base}"'
 for job in *.sh; do
 sbatch $job
 done
+
+## Run multiqc to get a nice combined report and plots for all samples
+multiqc ${REPORT_DIR} /path/multiqc_results
+
 
 ####### GOOD LUCK ##########
