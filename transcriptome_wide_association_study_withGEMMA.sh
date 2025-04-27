@@ -22,4 +22,5 @@ gemma -g bimbamfile.txt -p traits.txt -k kinshipname.sXX.txt -lmm 4 -o twas_outp
 # -notsnp                   minor allele frequency cutoff is not used
 
 # When I do normal GWAS, I leave things as default
-# However, when I run TWAS, since these are not "real" SNPs, to avoid them being filtered out, I have to add -notsnp flag
+# However, when I run TWAS, since these are not "real" SNPs, to avoid them being filtered out, 
+# I have to add -notsnp flag in both kinship generation and twas running steps
