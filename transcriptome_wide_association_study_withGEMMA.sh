@@ -11,3 +11,15 @@ gemma -g bimbamfile.txt -p trait.txt -gk 2 -o kinshipname
   # gk 2 is for making kinship with bimbam input
 # Run TWAS
 gemma -g bimbamfile.txt -p traits.txt -k kinshipname.sXX.txt -lmm 4 -o twas_outputname
+
+
+## NOTE
+# SNP QC OPTIONS
+# -miss     [num]           specify missingness threshold (default 0.05)
+# -maf      [num]           specify minor allele frequency threshold (default 0.01)
+# -hwe      [num]           specify HWE test p value threshold (default 0; no test)
+# -r2       [num]           specify r-squared threshold (default 0.9999)
+# -notsnp                   minor allele frequency cutoff is not used
+
+# When I do normal GWAS, I leave things as default
+# However, when I run TWAS, since these are not "real" SNPs, to avoid them being filtered out, I have to add -notsnp flag
