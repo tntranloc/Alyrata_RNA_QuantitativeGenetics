@@ -267,6 +267,133 @@ ggplot(bootstrap_ratios_table, aes(x = Group, y = Ratio, fill = Group)) +
   #scale_fill_manual(values = c(...)) # add custom palettes 
   scale_fill_brewer(palette = "Pastel1") # or use colour brewer
 
+########## similar but also saving bootstraped pS ##########
+process_group = function(file) {
+  # Read the group file
+  group_data = read.table(file, header = TRUE, sep = "\t", stringsAsFactors = FALSE)
+  
+  # Ensure pN and pS are numeric; drop any bad rows
+  group_data$pN = as.numeric(group_data$pN)
+  group_data$pS = as.numeric(group_data$pS)
+  group_data = subset(group_data, !is.na(pN) & !is.na(pS))
+  
+  # Avoid divide‐by‐zero
+  group_data$pS[group_data$pS == 0] <- 0.001
+  
+  # Calculate original means & ratio
+  mean_pN = mean(group_data$pN, na.rm = TRUE)
+  mean_pS = mean(group_data$pS, na.rm = TRUE)
+  original_ratio = mean_pN / mean_pS
+  
+  # Bootstrap means
+  # we'll capture both in a 2×B matrix
+  boot_mat = replicate(bootstrap_iterations, {
+    samp = group_data[sample(nrow(group_data), replace = TRUE), ]
+    c(pn = mean(samp$pN, na.rm = TRUE),
+      ps = mean(samp$pS, na.rm = TRUE))
+  })
+  # extract the two rows
+  bootstrap_pN      = boot_mat["pn", ]
+  bootstrap_pS      = boot_mat["ps", ]
+  bootstrap_ratios  = bootstrap_pN / bootstrap_pS
+  
+  # Return all of them
+  list(
+    group_name       = gsub("\\.txt$", "", basename(file)),
+    mean_pN          = mean_pN,
+    mean_pS          = mean_pS,
+    original_ratio   = original_ratio,
+    bootstrap_pN     = bootstrap_pN,
+    bootstrap_pS     = bootstrap_pS,
+    bootstrap_ratios = bootstrap_ratios
+  )
+}
+
+
+# Process each group and store results
+bootstrap_results = lapply(group_files, process_group)
+
+bootstrap_table = do.call(rbind, lapply(bootstrap_results, function(res) {
+  B = length(res$bootstrap_ratios)
+  data.frame(
+    Group     = res$group_name,
+    Type      = c("Original",   rep("Bootstrap", B)),
+    pN        = c(res$mean_pN, res$bootstrap_pN),
+    pS        = c(res$mean_pS, res$bootstrap_pS),
+    Ratio     = c(res$original_ratio, res$bootstrap_ratios),
+    stringsAsFactors = FALSE
+  )
+}))
+
+# Inspect
+head(bootstrap_table)
+
+# Extract the relevant part from the Group column
+bootstrap_table$Group = sub(".*_table_(.*?)_genes$", "\\1",bootstrap_table$Group)
+bootstrap_ratios_file="pS_bootstrap1k_allgroups_intra.csv"
+
+
+# Output message
+cat("Bootstrap analysis complete.\n")
+cat("Bootstrap ratios saved to:", bootstrap_ratios_file, "\n")
+cat("Significance results saved to:", significance_results_file, "\n")
+
+
+
+# Load ggplot2 library
+library(ggplot2)
+
+# Load the bootstrap ratios table
+bootstrap_table$Group = as.factor(bootstrap_table$Group)
+
+bootstrap_table$Group = factor(bootstrap_table$Group, levels = c("highA",
+                                                                 "highD",  "highR", 
+                                                                  "iVg", "random4k"))
+
+library(dplyr)
+bootstrap_table$Group = recode(bootstrap_table$Group,
+                                      "random4k" = "Random",
+                                      "highA" = "High VA",
+                                      "highD" = "High VNA",
+                                      "highR" = "High VR",
+                                      "iVg" = "iVg")
+
+
+ggplot(bootstrap_table, aes(x = Group, y = pS, fill = Group)) +
+  # standard boxplot
+  geom_boxplot(
+    width = 0.6,
+    outlier.shape = NA,
+    colour = "black",
+    alpha = 0.8
+  ) +
+  # highlight the original means
+  geom_point(
+    data = subset(bootstrap_table, Type == "Original"),
+    aes(x = Group, y = pS),
+    color = "salmon4",
+    size = 2.5,
+    shape = 18
+  ) +
+  # your custom fill palette
+  scale_fill_manual(values = c("#82D08C","#FFAE55","#C5C6C7","#909090","#41424C")) +
+  #theme_minimal(base_size = 14) +
+  labs(
+    title = "Bootstrap pS in Intra F1",
+    x     = NULL,
+    y     = "pS"
+  ) +
+  theme(
+    plot.title     = element_text(hjust = 0.5, size = 16, face = "bold"),
+    axis.text.x    = element_text(size = 12),
+    axis.text.y    = element_text(size = 12),
+    legend.position= "none"
+  )
+
+# Pairwise comparisons
+pwc = bootstrap_table %>% 
+  dunn_test(Ratio ~ Group, p.adjust.method = "bonferroni") 
+pwc
 
 
 #############################################################################################
