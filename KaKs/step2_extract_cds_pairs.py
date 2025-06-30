@@ -3,9 +3,9 @@
 from Bio import SeqIO
 
 # Filepaths
-lyrata_fasta = "NT1_cds_fromGTF_matchingOrthoIDs.fasta"
-thaliana_fasta = "Athaliana_167_cds_matchingOrthoIDs.fasta"
-ortholog_file = "strict_NT1_Athaliana167_orthologs_clean.txt"
+lyrata_fasta = "your_cds_fromGTF_matchingOrthoIDs.fasta"
+thaliana_fasta = "your_cds_matchingOrthoIDs.fasta"
+ortholog_file = "your_2species_orthologs.txt"
 
 # Load all CDS into dictionaries for quick access
 lyrata_cds = SeqIO.to_dict(SeqIO.parse(lyrata_fasta, "fasta"))
