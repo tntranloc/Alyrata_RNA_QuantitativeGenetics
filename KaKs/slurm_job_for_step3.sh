@@ -39,6 +39,6 @@ for i in $(seq $start_index $end_index); do
     input_file="${input_files[$i]}"
     # Only process if the file actually exists (avoid out-of-bounds issues)
     if [[ -f "$input_file" ]]; then
-        python run_align_pal2nal.py "$input_file"
+        python step3_mafft_alignment_pal2nal.py "$input_file"
     fi
 done
