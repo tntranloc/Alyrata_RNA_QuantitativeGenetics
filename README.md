@@ -14,7 +14,6 @@ Main scripts
 - genetic_variance_analysis_brms.R is an Rscript to run Animal Model on large scale data such as gene count matrix on cluster
 - eQTL_analysis_with_qtltools.sh shows how to perform expression QTL analysis with qtltools
 - plantCV_computervision_...md is a Python workflow to analyse plant images in a higher throughput way
-- complete_pNpS_ratio_for_gene_groups_workflow.txt shows how to calculate nucleotide diversity in a population using variant calling input, with optional bootstrap in the downstream anaylsis
 - snpeff_annotation_and_how_to_build_own_refgenome_database.sh: using snpeff to extract synonymous and non.synonymous variants using variant calling input, and also building your own reference genome database for snpeff
 - enrichment_and_clustering.R: functional enrichment analysis and hierachial clustering
 - randomForest_for_geneticArchitecture.R: random forest analysis
