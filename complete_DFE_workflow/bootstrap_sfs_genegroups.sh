@@ -16,8 +16,16 @@ conda activate /projects/ag-demeaux/ltntran/myconda_p313
 module load bio/BCFtools/1.18-GCC-12.3.0
 
 INPUT=/genegroups/input_NoRepeats_NoHet.VarFiltration.rmINDELS.minQ30.minDP10.biallelic.maxmiss20.recode.SNPsOnly.vcf.gz
+    # the vcf must be already marked for repeats, removed fixed heterozygosity, removed INDELS, 
+    # minQ 30, minDP 10, kept for biallelic sites only, allowed for maximum 20% missingness
 POP=/pi/AlyrataParents_17PL_populations.tsv
-GENE_BED=/projects/ag-demeaux/ltntran/genegroups/NT1_annotation_gene_group.bed 
+    # simply a pop info file of 2 columns, individual name - pop name, f.e. 
+    # Alyr1   PL
+    # Alyr2   PL
+GENE_BED=/genegroups/NT1_annotation_gene_group.bed 
+    # 4 columns, chromosome - start - end - geneID, f.e. 
+    #scaffold_1      10155851        10158686        AL1G36520
+    #scaffold_1      10261716        10262735        AL1G36820
 BOOTSTRAP_REPS=200  # Number of bootstrap replicates
 
 #mkdir -p bootstrap_output
