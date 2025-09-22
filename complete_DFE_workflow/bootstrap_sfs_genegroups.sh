@@ -18,6 +18,7 @@ module load bio/BCFtools/1.18-GCC-12.3.0
 INPUT=/genegroups/input_NoRepeats_NoHet.VarFiltration.rmINDELS.minQ30.minDP10.biallelic.maxmiss20.recode.SNPsOnly.vcf.gz
     # the vcf must be already marked for repeats, removed fixed heterozygosity, removed INDELS, 
     # minQ 30, minDP 10, kept for biallelic sites only, allowed for maximum 20% missingness
+    # fixed heterozygosity means where all individuals were called as heterozygotes and no homozygotes were present 
 POP=/pi/AlyrataParents_17PL_populations.tsv
     # simply a pop info file of 2 columns, individual name - pop name, f.e. 
     # Alyr1   PL
