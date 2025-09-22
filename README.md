@@ -6,6 +6,7 @@
 
 Main scripts
 - AnimalModel_collected_scripts.Rmd shows methods to run Animal Model over the past decade, starting with pedigreemm and ending with current brms package
+- complete_AnimalModel_BRMS is the up-to-date established pipeline to run large-scale data on a HPC cluster
 - complete_RNAseq_workflow_from_fastq_to_counttable.sh shows how to perform RNA-seq analysis from fastq to final count table ready for any downstream analysis
 - complete_VariantCalling_workflow_for RNAseq_gatk.sh shows how to call variants using RNAseq data using GATK pipeline
 - complete_pNpS_ratios_for_gene_groups_workflow.txt shows how to calculate pN/pS ratios using variants in parental population(s) using bootstrap with replacement method
