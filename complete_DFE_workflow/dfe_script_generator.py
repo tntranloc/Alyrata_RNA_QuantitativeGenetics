@@ -15,9 +15,9 @@ module load system/OpenSSL/1.1
 
 source /projects/ag-demeaux/ltntran/poetry_env/bin/activate
 
-cd /projects/ag-demeaux/ltntran/SFS_and_DFE/DFE_May2025
+cd /your/directory/
 
-python dfe_April2025_VA.py --start {start} --end {end} --folder /projects/ag-demeaux/ltntran/SFS_and_DFE/DFE_May2025/INTRA/hig>
+python run_dfe.py --start {start} --end {end} --folder /your/output/dir
 """
 
 # Define the range and step
@@ -26,7 +26,7 @@ end_range = 200
 step = 10
 
 import os
-os.chdir("/projects/ag-demeaux/ltntran/SFS_and_DFE/DFE_May2025/jobs_INTRA_highA")
+os.chdir("/path/to/jobs_dir")
 
 # Loop to generate job scripts
 for job_id, start in enumerate(range(start_range, end_range, step), start=1):
