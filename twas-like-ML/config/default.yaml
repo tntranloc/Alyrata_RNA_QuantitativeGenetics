@@ -1,0 +1,37 @@
+random_seed: 42
+outputs_dir: "outputs"
+
+data:
+  expression_csv: "data/expression.csv"      # rows=samples, cols=genes
+  phenotypes_csv: "data/phenotypes.csv"      # rows=samples, cols=traits
+  sample_index_col: 0                        # set to null if CSV has no index column
+  trait: "rosetteSize"                       # target column in phenotypes
+  use_relative_fitness: true                 # y = trait / mean(trait)
+
+preprocessing:
+  filter_low_variance:
+    enable: true
+    top_n: 5000                              # keep top-N most variable genes
+  standardize_features: true                 # standardize genes inside pipelines
+
+unsupervised_pcr:
+  leakage_safe: false                        # set true to fit scaler/PCA inside CV
+  pca_variance_cutoff: 0.95                  # if leakage_safe=false, use explained variance cutoff
+  cv:
+    n_splits: 5
+    n_repeats: 100
+  select_top_genes: 300
+  grid_k: [10, 20, 50, 100, 200, 300]        # used only if leakage_safe=true
+  randomized_pca: false                      # set true for large data
+
+supervised_gb:
+  mode: "classifier"                         # "regressor" or "classifier"
+  test_size: 0.4
+  params:
+    n_estimators: 100
+    learning_rate: 0.1
+    max_depth: 3
+  select_top_genes: 300
+
+overlap:
+  out_csv: "outputs/overlap_genes.csv"
