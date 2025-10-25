@@ -1,6 +1,6 @@
 #### Authors: Nhu L.T.Tran
 #### Email: ntran5@uni-koeln.de
-#### Last updated: 30.08.2024
+#### Last updated: 25.10.2025
 
 #### Collected scripts for my PhD project in Quantitative Genetics in plant transcriptome and fitness. 
 
@@ -18,7 +18,7 @@ Main scripts
 - enrichment_and_clustering.R: functional enrichment analysis and hierachial clustering
 - randomForest_for_geneticArchitecture.R: random forest analysis
 - transcriptome_wide_association_study_withGEMMA.sh: running TWAS using simple workflow with GEMMA
-
+- twas-like-ML: Python pipeline for TWAS-like expression-trait analysis. Includes (i) unsupervised principal component regression (PCA-OLS with back-transformed per-gene “selection gradients”), (ii) supervised Gradient Boosting (regressor/classifier) for predictive ranking, and (iii) overlap analysis with hypergeometric enrichment. Reproducible via YAML config; writes ranked gene lists and metrics.
 
 Supporting scripts:
 - plot_quantGene_concept_model.md shows how to visualise allele substitution effect and genetic variance components in different scenarios of dominance, additive, underdominance, overdominance, etc
