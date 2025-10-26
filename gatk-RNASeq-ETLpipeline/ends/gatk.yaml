@@ -1,0 +1,10 @@
+name: gatk-rnaseq
+channels:
+  - bioconda
+  - conda-forge
+dependencies:
+  - gatk4=4.6.1.0
+  - picard
+  - bcftools
+  - samtools
+  - openjdk=17
