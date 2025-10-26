@@ -1,0 +1,33 @@
+
+---
+
+## ⚙️ `config/config.yaml`
+
+```yaml
+# Paths
+ref_fasta: "/path/to/Alyrata.fasta"
+gtf: "/path/to/Alyrata.gtf"           # if you only have GFF, set gff below and use 00_prep_reference.sh
+gff: ""                               # "/path/to/annotation.gff" or "" to skip conversion
+star_index_dir: "/path/to/star_index" # will be created if missing
+
+# IO
+results_dir: "results"
+fastqc_raw_dir: "results/fastqc_raw"
+trim_dir: "results/trimming"
+fastqc_trim_dir: "results/fastqc_trimmed"
+map_dir: "results/mapping"
+
+# Adapters (Trimmomatic)
+adapters_fa: "/path/to/TruSeq2-PE.fa"
+
+# Resources
+threads: 12
+star_genomeSAindexNbases: 8
+
+# SLURM defaults (you can override at submit time)
+partition: "smp"
+account: "UniKoeln"
+cpus_per_task: 4
+mem: "42gb"
+time: "24:00:00"
+mail_user: "ntran5@uni-koeln.de"
