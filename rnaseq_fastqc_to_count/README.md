@@ -1,6 +1,7 @@
 # RNA-seq ETL: FastQC → Trimmomatic → STAR (+ GeneCounts)
 
-**Author:** Nhu L.T. Tran · **Email:** ntran5@uni-koeln.de  
+**Author:** Nhu L.T. Tran 
+**Last updated**: 26 Oct 2025
 SLURM-ready pipeline for RNA-seq preprocessing: raw QC → trimming → (optional) post-trim QC → alignment with STAR and per-gene counts.
 
 ## Requirements
