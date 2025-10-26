@@ -1,0 +1,3 @@
+# SAMPLE_ID <tab> /path/to/BAM
+S01  S01 data/S01.Aligned.sortedByCoord.out.bam
+S02  S02 data/S02.Aligned.sortedByCoord.out.bam
