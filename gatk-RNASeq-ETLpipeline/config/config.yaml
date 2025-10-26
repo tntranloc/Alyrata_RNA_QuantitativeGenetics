@@ -1,5 +1,24 @@
 ## Running on cluster
 # set REF, OUTDIR, etc.
+
+## Example 
+
+```yaml
+ref: "/path/to/reference_genome.fasta"
+outdir: "results"
+picard: "/path/to/picard.jar"
+
+cluster:
+  cpus: 4
+  mem_gb: 8
+  partition: normal
+
+filters:
+  missing: 0.1
+  dp_min: 10
+  dp_max: 100
+  maf: 0.05
+
 ```bash
 # 1️⃣ submit per-sample extraction (array)
 sbatch --array=1-$(wc -l < config/samples.tsv) scripts/gatk_rnaseq_etl.sh
