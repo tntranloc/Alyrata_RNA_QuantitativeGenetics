@@ -16,6 +16,12 @@ SLURM-ready pipeline for RNA-seq preprocessing: raw QC → trimming → (optiona
 
 ## Quick start
 ```bash
+git clone ...
+conda env create -f envs/rnaseq.yaml
+conda activate rnaseq
+vim config/config.yaml      # set paths
+vim config/samples.tsv      # list samples
+
 # 0) (once) prepare reference (STAR index, GFF->GTF if needed)
 sbatch scripts/00_prep_reference.sh
 
