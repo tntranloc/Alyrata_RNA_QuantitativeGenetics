@@ -30,3 +30,7 @@ sbatch --array=1-$(($(wc -l < config/samples.tsv))) scripts/30_fastqc_trimmed.sh
 
 # 4) STAR mapping + GeneCounts
 sbatch --array=1-$(($(wc -l < config/samples.tsv))) scripts/40_star_map_counts.sh
+
+# Optional: aggregate the result
+Rscript scripts/aggregate_counts.R results/mapping/ counts_matrix.csv
+
