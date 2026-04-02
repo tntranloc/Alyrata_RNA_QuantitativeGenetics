@@ -11,7 +11,8 @@
     # this must be saved as bed file
       # must be zipped and tabix
       bgzip myPhenotypes.bed && tabix -p bed phenotypes.bed.gz
-      
+      # must be sorted by CHR and by start position within each CHR!
+	  
     # Columns required are: 
       # "#CHR" (same chromosome name as vcf file) 
       # "start" = numeric
