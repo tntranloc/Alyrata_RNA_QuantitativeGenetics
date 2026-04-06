@@ -41,6 +41,8 @@ PC3 0.03 0.05 0.08 0.07
 ...
 
 ### Combine PCs from bed and vcf into one single covariate file, like rowbind, because they both share sample header
+# for example 5 rows from each 
+(head -n 1 genotypes.pca && tail -n +2 genotypes.pca | head -n 5 && tail -n +2 geneexpression.pca | head -n 5) > 5geno5expression.txt
 
 ### USE pca_stats to see how much % is explained by how many PCs
 # Try different PCs to see which one give the highest detected eQTL
