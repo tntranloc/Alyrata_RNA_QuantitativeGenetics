@@ -353,30 +353,32 @@ write.table(D[,c(1,ncol(D))], fout2, quote=FALSE, row.names=FALSE, col.names=FAL
 ## start of script ## 
 #!/usr/bin/env Rscript
 #Read command line arguments
+library(data.table)
+
 args <- commandArgs(trailingOnly = TRUE)
-try(if(length(args) != 3) stop("Incorrect number of arguments, usage> Rscript runFDR_ftrans.R nominal.hits.txt.gz permutation.hits.txt.gz output.txt"))
+if (length(args) != 3) stop("Incorrect number of arguments, usage> Rscript runFDR_ftrans.R nominal.hits.txt.gz permutation.hits.txt.gz output.txt")
 
 cat("\nProcessing QTLtools full trans output\n");
 cat("  * File hits nominal = [", args[1], "]\n");
 cat("  * File hits permute = [", args[2], "]\n");
 cat("  * Output            = [", args[3], "]\n");
 
-#Read data
-Nh=read.table(args[1], head=FALSE, stringsAsFactors=FALSE)
-Ph=read.table(args[2], head=FALSE, stringsAsFactors=FALSE)
+# Read data using data.table
+Nh <- fread(args[1], header = FALSE)
+Ph <- fread(args[2], header = FALSE)
 
-#Sort best hits
-Nh=Nh[order(Nh$V7), ]
-Ph=Ph[order(Ph$V7), ]
+# Sort by P-value (column V7)
+setorder(Nh, V7)
+setorder(Ph, V7)
 
-#Estimate FDR
-Nh$fdr=1.0
-for (h in 1:nrow(Nh)) {
-	Nh$fdr[h] = sum(Ph$V7 <= Nh$V7[h]) / h
-}
+# Pre-sort Ph$V7 for faster binary search
+Ph_sorted <- sort(Ph$V7)
 
-#OUTPUT
-write.table(Nh, args[3], quote=FALSE, row.names=FALSE, col.names=FALSE)
+# Calculate FDR
+Nh[, fdr := sapply(V7, function(p) sum(Ph_sorted <= p, na.rm = TRUE)) / seq_len(.N)]
+
+# Write output
+fwrite(Nh, args[3], quote = FALSE, col.names = FALSE)
 
 ##end of script ##
 
