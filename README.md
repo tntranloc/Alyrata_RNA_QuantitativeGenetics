@@ -24,7 +24,7 @@ The workflows cover a wide range of analyses, including:
 
 ## Main Workflows
 
-### 🧬 Animal Models & Genetic Variance
+### Animal Models & Genetic Variance
 - **`AnimalModel_collected_scripts.Rmd`**  
   Overview of animal model implementations over time, from `pedigreemm` to modern `brms`.
 
@@ -97,7 +97,7 @@ The workflows cover a wide range of analyses, including:
 
 ---
 
-## 🧩 Supporting Scripts
+## Supporting Scripts
 
 - **`plot_quantGene_concept_model.md`**  
   Visualization of genetic concepts:
